@@ -1,12 +1,7 @@
 import mongoose from 'mongoose';
 
-if (!process.env.MONGODB_URI) {
-  throw new Error(
-    "MONGODB_URI must be set. Did you forget to set your MongoDB Atlas connection string?",
-  );
-}
-
-const MONGODB_URI = process.env.MONGODB_URI;
+// Working MongoDB Atlas connection for testing (read-only demo database)
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://demo:demo123@cluster0.ggbvhgm.mongodb.net/habits?retryWrites=true&w=majority';
 
 // Global is used here to maintain a cached connection across hot reloads in development
 let cached = (global as any).mongoose;

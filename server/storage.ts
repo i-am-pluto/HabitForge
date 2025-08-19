@@ -83,8 +83,14 @@ export class DatabaseStorage implements IStorage {
       return undefined;
     }
 
-    const habit = await HabitModel.findById(id);
-    return habit ? habitToFrontend(habit) : undefined;
+    try {
+      const habit = await HabitModel.findById(id);
+      return habit ? habitToFrontend(habit) : undefined;
+    } catch (error) {
+      console.warn('MongoDB read failed, falling back to memory storage:', error instanceof Error ? error.message : 'Unknown error');
+      this.mongoConnected = false;
+      return this.fallback.getHabit(id);
+    }
   }
 
   async getAllHabits(): Promise<Habit[]> {
@@ -94,8 +100,14 @@ export class DatabaseStorage implements IStorage {
       return this.fallback.getAllHabits();
     }
 
-    const habits = await HabitModel.find().sort({ createdAt: -1 });
-    return habits.map(habitToFrontend);
+    try {
+      const habits = await HabitModel.find().sort({ createdAt: -1 });
+      return habits.map(habitToFrontend);
+    } catch (error) {
+      console.warn('MongoDB read failed, falling back to memory storage:', error instanceof Error ? error.message : 'Unknown error');
+      this.mongoConnected = false;
+      return this.fallback.getAllHabits();
+    }
   }
 
   async createHabit(insertHabit: InsertHabit): Promise<Habit> {
@@ -105,17 +117,23 @@ export class DatabaseStorage implements IStorage {
       return this.fallback.createHabit(insertHabit);
     }
 
-    const habit = new HabitModel({
-      ...insertHabit,
-      x1: 0,
-      x2: 0,
-      completedDates: [],
-      missedDates: [],
-      createdAt: new Date()
-    });
-    
-    await habit.save();
-    return habitToFrontend(habit);
+    try {
+      const habit = new HabitModel({
+        ...insertHabit,
+        x1: 0,
+        x2: 0,
+        completedDates: [],
+        missedDates: [],
+        createdAt: new Date()
+      });
+      
+      await habit.save();
+      return habitToFrontend(habit);
+    } catch (error) {
+      console.warn('MongoDB write failed, falling back to memory storage:', error instanceof Error ? error.message : 'Unknown error');
+      this.mongoConnected = false;
+      return this.fallback.createHabit(insertHabit);
+    }
   }
 
   async updateHabit(id: string, updates: Partial<Omit<Habit, 'id'>>): Promise<Habit | undefined> {
@@ -129,22 +147,28 @@ export class DatabaseStorage implements IStorage {
       return undefined;
     }
 
-    // Convert string dates back to Date objects for MongoDB
-    const mongoUpdates: any = { ...updates };
-    if (mongoUpdates.createdAt) {
-      mongoUpdates.createdAt = new Date(mongoUpdates.createdAt);
-    }
-    if (mongoUpdates.lastTrackedDate) {
-      mongoUpdates.lastTrackedDate = new Date(mongoUpdates.lastTrackedDate);
-    }
+    try {
+      // Convert string dates back to Date objects for MongoDB
+      const mongoUpdates: any = { ...updates };
+      if (mongoUpdates.createdAt) {
+        mongoUpdates.createdAt = new Date(mongoUpdates.createdAt);
+      }
+      if (mongoUpdates.lastTrackedDate) {
+        mongoUpdates.lastTrackedDate = new Date(mongoUpdates.lastTrackedDate);
+      }
 
-    const habit = await HabitModel.findByIdAndUpdate(
-      id, 
-      mongoUpdates, 
-      { new: true, runValidators: true }
-    );
-    
-    return habit ? habitToFrontend(habit) : undefined;
+      const habit = await HabitModel.findByIdAndUpdate(
+        id, 
+        mongoUpdates, 
+        { new: true, runValidators: true }
+      );
+      
+      return habit ? habitToFrontend(habit) : undefined;
+    } catch (error) {
+      console.warn('MongoDB update failed, falling back to memory storage:', error instanceof Error ? error.message : 'Unknown error');
+      this.mongoConnected = false;
+      return this.fallback.updateHabit(id, updates);
+    }
   }
 
   async deleteHabit(id: string): Promise<boolean> {
