@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { userSession } from "@/lib/userSession";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,15 +14,49 @@ export function SessionManager({ onSessionChange }: SessionManagerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [sessionName, setSessionName] = useState("");
   const [newSessionId, setNewSessionId] = useState("");
-  const [savedSessions] = useState(() => userSession.getSavedSessions());
-  const currentSessionName = userSession.getCurrentSessionName();
+  const [savedSessions, setSavedSessions] = useState<any[]>([]);
+  const [currentSessionName, setCurrentSessionName] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const currentSessionId = userSession.getUserId();
 
-  const handleSaveCurrentSession = () => {
+  // Load saved sessions when component mounts or when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      loadSessions();
+    }
+  }, [isOpen]);
+
+  const loadSessions = async () => {
+    setLoading(true);
+    try {
+      const [sessions, sessionName] = await Promise.all([
+        userSession.getSavedSessions(),
+        userSession.getCurrentSessionName()
+      ]);
+      setSavedSessions(sessions);
+      setCurrentSessionName(sessionName);
+    } catch (error) {
+      console.error("Error loading sessions:", error);
+      setSavedSessions([]);
+      setCurrentSessionName(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveCurrentSession = async () => {
     if (sessionName.trim()) {
-      userSession.saveCurrentSession(sessionName.trim());
-      setSessionName("");
-      onSessionChange();
+      setLoading(true);
+      try {
+        await userSession.saveCurrentSession(sessionName.trim());
+        setSessionName("");
+        await loadSessions(); // Reload sessions
+        onSessionChange();
+      } catch (error) {
+        console.error("Error saving session:", error);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -50,10 +84,18 @@ export function SessionManager({ onSessionChange }: SessionManagerProps) {
     }
   };
 
-  const handleDeleteSession = (sessionId: string) => {
+  const handleDeleteSession = async (sessionId: string) => {
     if (confirm("Delete this saved session? This won't delete the actual data, just remove it from your saved list.")) {
-      userSession.deleteSavedSession(sessionId);
-      onSessionChange();
+      setLoading(true);
+      try {
+        await userSession.deleteSavedSession(sessionId);
+        await loadSessions(); // Reload sessions
+        onSessionChange();
+      } catch (error) {
+        console.error("Error deleting session:", error);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -121,10 +163,10 @@ export function SessionManager({ onSessionChange }: SessionManagerProps) {
               />
               <Button
                 onClick={handleSaveCurrentSession}
-                disabled={!sessionName.trim()}
+                disabled={!sessionName.trim() || loading}
                 data-testid="button-save-session"
               >
-                Save
+                {loading ? "Saving..." : "Save"}
               </Button>
             </div>
           </div>

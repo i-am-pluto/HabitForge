@@ -1,7 +1,5 @@
-import { pgTable, text, integer, timestamp, jsonb } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import mongoose, { Schema, Document } from "mongoose";
 
 // Zod schemas for validation
 export const habitSchema = z.object({
@@ -24,12 +22,26 @@ export const habitSchema = z.object({
   missedDates: z.array(z.string())
 });
 
-export const insertHabitSchema = createInsertSchema(habits).omit({
+export const insertHabitSchema = habitSchema.omit({
+  id: true,
+  userId: true,
+  x1: true,
+  x2: true,
   createdAt: true,
-  lastTrackedDate: true,
+  completedDates: true,
+  missedDates: true,
+  lastTrackedDate: true
 });
 
-export const insertUserSessionSchema = createInsertSchema(userSessions).omit({
+// User session schema for validation
+export const userSessionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  createdAt: z.string(),
+  lastUsed: z.string(),
+});
+
+export const insertUserSessionSchema = userSessionSchema.omit({
   createdAt: true,
   lastUsed: true,
 });
@@ -37,45 +49,84 @@ export const insertUserSessionSchema = createInsertSchema(userSessions).omit({
 // TypeScript types
 export type Habit = z.infer<typeof habitSchema>;
 export type InsertHabit = z.infer<typeof insertHabitSchema>;
+export type UserSession = z.infer<typeof userSessionSchema>;
+export type InsertUserSession = z.infer<typeof insertUserSessionSchema>;
 
-// PostgreSQL Tables
-export const habits = pgTable("habits", {
-  id: text("id").primaryKey(),
-  userId: text("user_id").notNull(),
-  name: text("name").notNull(),
-  category: text("category").notNull(),
-  x1: integer("x1").default(0).notNull(),
-  x2: integer("x2").default(0).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  completedDates: jsonb("completed_dates").$type<string[]>().default([]).notNull(),
-  missedDates: jsonb("missed_dates").$type<string[]>().default([]).notNull(),
-  lastTrackedDate: timestamp("last_tracked_date"),
+// MongoDB Schema for Habits
+export interface IHabit extends Document {
+  _id: mongoose.Types.ObjectId;
+  userId: string;
+  name: string;
+  category: "Health & Fitness" | "Learning" | "Productivity" | "Mindfulness" | "Creative" | "Social";
+  x1: number;
+  x2: number;
+  createdAt: Date;
+  lastTrackedDate?: Date;
+  completedDates: string[];
+  missedDates: string[];
+}
+
+const habitMongoSchema = new Schema<IHabit>({
+  userId: { type: String, required: true, index: true },
+  name: { type: String, required: true },
+  category: { 
+    type: String, 
+    required: true,
+    enum: ["Health & Fitness", "Learning", "Productivity", "Mindfulness", "Creative", "Social"]
+  },
+  x1: { type: Number, required: true, default: 0 },
+  x2: { type: Number, required: true, default: 0 },
+  createdAt: { type: Date, required: true, default: Date.now },
+  lastTrackedDate: { type: Date },
+  completedDates: { type: [String], required: true, default: [] },
+  missedDates: { type: [String], required: true, default: [] }
 });
 
-export const userSessions = pgTable("user_sessions", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  lastUsed: timestamp("last_used").defaultNow().notNull(),
+export const HabitModel = mongoose.model<IHabit>('Habit', habitMongoSchema);
+
+// MongoDB Schema for User Sessions
+export interface IUserSession extends Document {
+  _id: mongoose.Types.ObjectId;
+  id: string;
+  name: string;
+  createdAt: Date;
+  lastUsed: Date;
+}
+
+const userSessionMongoSchema = new Schema<IUserSession>({
+  id: { type: String, required: true, unique: true, index: true },
+  name: { type: String, required: true },
+  createdAt: { type: Date, required: true, default: Date.now },
+  lastUsed: { type: Date, required: true, default: Date.now }
 });
 
-// Relations
-export const userSessionsRelations = relations(userSessions, ({ many }) => ({
-  habits: many(habits),
-}));
+export const UserSessionModel = mongoose.model<IUserSession>('UserSession', userSessionMongoSchema);
 
-export const habitsRelations = relations(habits, ({ one }) => ({
-  userSession: one(userSessions, {
-    fields: [habits.userId],
-    references: [userSessions.id],
-  }),
-}));
+// Helper function to convert MongoDB document to frontend format
+export function habitToFrontend(habit: IHabit): Habit {
+  return {
+    id: habit._id.toString(),
+    userId: habit.userId,
+    name: habit.name,
+    category: habit.category,
+    x1: habit.x1,
+    x2: habit.x2,
+    createdAt: habit.createdAt.toISOString(),
+    lastTrackedDate: habit.lastTrackedDate?.toISOString(),
+    completedDates: habit.completedDates,
+    missedDates: habit.missedDates
+  };
+}
 
-// Export types
-export type DBHabit = typeof habits.$inferSelect;
-export type InsertDBHabit = typeof habits.$inferInsert;
-export type UserSession = typeof userSessions.$inferSelect;
-export type InsertUserSession = typeof userSessions.$inferInsert;
+// Helper function to convert MongoDB user session to frontend format
+export function userSessionToFrontend(session: IUserSession): UserSession {
+  return {
+    id: session.id,
+    name: session.name,
+    createdAt: session.createdAt.toISOString(),
+    lastUsed: session.lastUsed.toISOString()
+  };
+}
 
 export interface HabitProgress {
   currentValue: number; // Current y-value from formula

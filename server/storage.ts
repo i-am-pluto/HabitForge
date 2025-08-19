@@ -1,9 +1,14 @@
 import {
   HabitModel,
+  UserSessionModel,
   type Habit,
   type InsertHabit,
   type IHabit,
+  type UserSession,
+  type InsertUserSession,
+  type IUserSession,
   habitToFrontend,
+  userSessionToFrontend,
 } from "@shared/schema";
 import connectToDatabase from "./db";
 import mongoose from "mongoose";
@@ -18,11 +23,20 @@ export interface IStorage {
     updates: Partial<Omit<Habit, "id" | "userId">>,
   ): Promise<Habit | undefined>;
   deleteHabit(id: string, userId: string): Promise<boolean>;
+  
+  // Session management methods
+  getUserSession(sessionId: string): Promise<UserSession | undefined>;
+  getAllUserSessions(): Promise<UserSession[]>;
+  createUserSession(session: InsertUserSession): Promise<UserSession>;
+  updateUserSession(sessionId: string, updates: Partial<InsertUserSession>): Promise<UserSession | undefined>;
+  deleteUserSession(sessionId: string): Promise<boolean>;
+  updateSessionLastUsed(sessionId: string): Promise<void>;
 }
 
 // In-memory storage fallback for when MongoDB is not available
 export class MemStorage implements IStorage {
   private habits: Map<string, Habit> = new Map();
+  private sessions: Map<string, UserSession> = new Map();
   private idCounter = 1;
 
   private generateId(): string {
@@ -76,6 +90,47 @@ export class MemStorage implements IStorage {
     const habit = this.habits.get(id);
     if (!habit || habit.userId !== userId) return false;
     return this.habits.delete(id);
+  }
+
+  // Session management methods for MemStorage
+  async getUserSession(sessionId: string): Promise<UserSession | undefined> {
+    return this.sessions.get(sessionId);
+  }
+
+  async getAllUserSessions(): Promise<UserSession[]> {
+    return Array.from(this.sessions.values());
+  }
+
+  async createUserSession(session: InsertUserSession): Promise<UserSession> {
+    const newSession: UserSession = {
+      ...session,
+      createdAt: new Date().toISOString(),
+      lastUsed: new Date().toISOString(),
+    };
+    this.sessions.set(session.id, newSession);
+    return newSession;
+  }
+
+  async updateUserSession(sessionId: string, updates: Partial<InsertUserSession>): Promise<UserSession | undefined> {
+    const session = this.sessions.get(sessionId);
+    if (session) {
+      const updatedSession = { ...session, ...updates };
+      this.sessions.set(sessionId, updatedSession);
+      return updatedSession;
+    }
+    return undefined;
+  }
+
+  async deleteUserSession(sessionId: string): Promise<boolean> {
+    return this.sessions.delete(sessionId);
+  }
+
+  async updateSessionLastUsed(sessionId: string): Promise<void> {
+    const session = this.sessions.get(sessionId);
+    if (session) {
+      session.lastUsed = new Date().toISOString();
+      this.sessions.set(sessionId, session);
+    }
   }
 }
 
@@ -228,6 +283,117 @@ export class DatabaseStorage implements IStorage {
 
     const result = await HabitModel.findOneAndDelete({ _id: id, userId });
     return result !== null;
+  }
+
+  // Session management methods for DatabaseStorage
+  async getUserSession(sessionId: string): Promise<UserSession | undefined> {
+    await this.ensureConnection();
+
+    if (!this.mongoConnected) {
+      return this.fallback.getUserSession(sessionId);
+    }
+
+    try {
+      const session = await UserSessionModel.findOne({ id: sessionId });
+      return session ? userSessionToFrontend(session) : undefined;
+    } catch (error) {
+      console.warn("MongoDB session read failed, falling back to memory storage:", error);
+      this.mongoConnected = false;
+      return this.fallback.getUserSession(sessionId);
+    }
+  }
+
+  async getAllUserSessions(): Promise<UserSession[]> {
+    await this.ensureConnection();
+
+    if (!this.mongoConnected) {
+      return this.fallback.getAllUserSessions();
+    }
+
+    try {
+      const sessions = await UserSessionModel.find({}).sort({ lastUsed: -1 }).limit(10);
+      return sessions.map(userSessionToFrontend);
+    } catch (error) {
+      console.warn("MongoDB session read failed, falling back to memory storage:", error);
+      this.mongoConnected = false;
+      return this.fallback.getAllUserSessions();
+    }
+  }
+
+  async createUserSession(session: InsertUserSession): Promise<UserSession> {
+    await this.ensureConnection();
+
+    if (!this.mongoConnected) {
+      return this.fallback.createUserSession(session);
+    }
+
+    try {
+      const newSession = new UserSessionModel(session);
+      const savedSession = await newSession.save();
+      return userSessionToFrontend(savedSession);
+    } catch (error) {
+      console.warn("MongoDB session create failed, falling back to memory storage:", error);
+      this.mongoConnected = false;
+      return this.fallback.createUserSession(session);
+    }
+  }
+
+  async updateUserSession(sessionId: string, updates: Partial<InsertUserSession>): Promise<UserSession | undefined> {
+    await this.ensureConnection();
+
+    if (!this.mongoConnected) {
+      return this.fallback.updateUserSession(sessionId, updates);
+    }
+
+    try {
+      const session = await UserSessionModel.findOneAndUpdate(
+        { id: sessionId },
+        updates,
+        { new: true }
+      );
+      return session ? userSessionToFrontend(session) : undefined;
+    } catch (error) {
+      console.warn("MongoDB session update failed, falling back to memory storage:", error);
+      this.mongoConnected = false;
+      return this.fallback.updateUserSession(sessionId, updates);
+    }
+  }
+
+  async deleteUserSession(sessionId: string): Promise<boolean> {
+    await this.ensureConnection();
+
+    if (!this.mongoConnected) {
+      return this.fallback.deleteUserSession(sessionId);
+    }
+
+    try {
+      const result = await UserSessionModel.deleteOne({ id: sessionId });
+      return result.deletedCount > 0;
+    } catch (error) {
+      console.warn("MongoDB session delete failed, falling back to memory storage:", error);
+      this.mongoConnected = false;
+      return this.fallback.deleteUserSession(sessionId);
+    }
+  }
+
+  async updateSessionLastUsed(sessionId: string): Promise<void> {
+    await this.ensureConnection();
+
+    if (!this.mongoConnected) {
+      return this.fallback.updateSessionLastUsed(sessionId);
+    }
+
+    try {
+      await UserSessionModel.findOneAndUpdate(
+        { id: sessionId },
+        { lastUsed: new Date() },
+        { upsert: false }
+      );
+    } catch (error) {
+      console.warn("MongoDB session lastUsed update failed, falling back to memory storage:", error);
+      this.mongoConnected = false;
+      return this.fallback.updateSessionLastUsed(sessionId);
+    }
   }
 }
 
