@@ -96,7 +96,7 @@ export function AddHabitModal({ isOpen, onClose, onAdd }: AddHabitModalProps) {
                 <div>
                   <p className="text-sm font-medium text-gray-900">How it works</p>
                   <p className="text-sm text-muted mt-1">
-                    Your habit will be tracked using the formula y = 0.5 × e^(0.05×(x1-x2)). Success days increase x1, missed days increase x2. The habit forms when y ≥ x.
+                    Your habit will be tracked using the formula y = 0.5 × e^(0.18×(x1-x2)). Success days increase x1, missed days increase x2. The habit forms when y ≥ x.
                   </p>
                 </div>
               </div>

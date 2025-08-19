@@ -1,7 +1,7 @@
 export function calculateHabitValue(x1: number, x2: number): number {
-  // Weighted exponential formula: y = 0.5 * e^(0.05*(x1-x2))
+  // Weighted exponential formula: y = 0.5 * e^(0.18*(x1-x2))
   // This ensures it takes ~20+ days to form a habit with consistent practice
-  return 0.5 * Math.exp(0.05 * (x1 - x2));
+  return 0.5 * Math.exp(0.18 * (x1 - x2));
 }
 
 export function isHabitFormed(x1: number, x2: number, daysSinceStart: number): boolean {
@@ -16,11 +16,11 @@ export function estimateDaysToHabit(x1: number, x2: number, daysSinceStart: numb
   
   // Estimate how many more successful days needed
   // Solve for x1 when y = daysSinceStart
-  // daysSinceStart = 0.5 * e^(0.05*(x1_needed - x2))
-  // ln(daysSinceStart / 0.5) = 0.05 * (x1_needed - x2)
-  // x1_needed = (ln(daysSinceStart / 0.5) / 0.05) + x2
+  // daysSinceStart = 0.5 * e^(0.18*(x1_needed - x2))
+  // ln(daysSinceStart / 0.5) = 0.18 * (x1_needed - x2)
+  // x1_needed = (ln(daysSinceStart / 0.5) / 0.18) + x2
   
-  const targetX1 = Math.max(x1, (Math.log(daysSinceStart / 0.5) / 0.05) + x2);
+  const targetX1 = Math.max(x1, (Math.log(daysSinceStart / 0.5) / 0.18) + x2);
   return Math.ceil(targetX1 - x1);
 }
 

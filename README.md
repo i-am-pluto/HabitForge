@@ -1,6 +1,6 @@
 # Mathematical Habit Tracker
 
-A modern habit tracking web application that uses exponential mathematical functions to predict habit formation. The app calculates habit strength using the formula `y = 0.5 × e^(0.05×(x1-x2))` where habits are considered "formed" when the curve crosses the y=x line (typically after 20+ days of consistent practice).
+A modern habit tracking web application that uses exponential mathematical functions to predict habit formation. The app calculates habit strength using the formula `y = 0.5 × e^(0.18×(x1-x2))` where habits are considered "formed" when the curve crosses the y=x line (typically after 20+ days of consistent practice).
 
 ## Features
 
@@ -81,7 +81,7 @@ A modern habit tracking web application that uses exponential mathematical funct
 
 ## Mathematical Formula
 
-The app uses the formula: **y = 0.5 × e^(0.05×(x1-x2))**
+The app uses the formula: **y = 0.5 × e^(0.18×(x1-x2))**
 
 Where:
 - `x1` = Number of successful days

@@ -245,9 +245,9 @@ export function HabitTracker() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-muted mb-1">Current Formula</p>
-                        <p className="font-mono text-lg text-gray-900">y = 0.5 × e^(0.05×(x1-x2))</p>
+                        <p className="font-mono text-lg text-gray-900">y = 0.5 × e^(0.18×(x1-x2))</p>
                         <p className="text-sm text-muted mt-1">
-                          y = 0.5 × e^(0.05×({selectedHabit.x1}-{selectedHabit.x2})) = {' '}
+                          y = 0.5 × e^(0.18×({selectedHabit.x1}-{selectedHabit.x2})) = {' '}
                           <span className="font-semibold text-primary">
                             {getHabitProgress(selectedHabit).currentValue.toFixed(2)}
                           </span>
