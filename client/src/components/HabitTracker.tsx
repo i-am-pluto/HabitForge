@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { userSession } from "@/lib/userSession";
 import { SessionManager } from "./SessionManager";
+import { getCurrentStreak as getHabitStreak } from "@/lib/habitMath";
+
 
 export function HabitTracker() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -303,22 +305,22 @@ export function HabitTracker() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-muted mb-1">Current Formula</p>
-                        <p className="font-mono text-lg text-gray-900">y = 0.5 × e^(0.18×(x1-x2))</p>
+                        <p className="font-mono text-lg text-gray-900">H(d) = 1 / (1 + e^(-0.2(d - 0.19)))</p>
                         <p className="text-sm text-muted mt-1">
-                          y = 0.5 × e^(0.18×({selectedHabit.x1}-{selectedHabit.x2})) = {' '}
+                          H({selectedHabit ? getHabitStreak(selectedHabit.completedDates) : 0}) = {' '}
                           <span className="font-semibold text-primary">
-                            {getHabitProgress(selectedHabit).currentValue.toFixed(2)}
+                            {getHabitProgress(selectedHabit).currentValue.toFixed(3)}
                           </span>
                         </p>
                       </div>
                       
                       <div className="text-right">
-                        <p className="text-sm text-muted">Habit forms when</p>
-                        <p className="text-lg font-semibold text-gray-900">y ≥ x</p>
+                        <p className="text-sm text-muted">Tipping point when</p>
+                        <p className="text-lg font-semibold text-gray-900">H(d) ≥ 0.5</p>
                         <p className="text-sm text-muted">
-                          Current: {getHabitProgress(selectedHabit).currentValue.toFixed(2)} ≥ {getDaysSinceStart(selectedHabit.createdAt)}? {' '}
-                          <span className={`font-semibold ${getHabitProgress(selectedHabit).status === 'formed' ? 'text-success' : 'text-warning'}`}>
-                            {getHabitProgress(selectedHabit).status === 'formed' ? 'Yes' : 'No'}
+                          Current: {getHabitProgress(selectedHabit).currentValue.toFixed(3)} ≥ 0.5? {' '}
+                          <span className={`font-semibold ${getHabitProgress(selectedHabit).status !== 'struggling' ? 'text-success' : 'text-warning'}`}>
+                            {getHabitProgress(selectedHabit).status !== 'struggling' ? 'Yes' : 'No'}
                           </span>
                         </p>
                       </div>
@@ -331,16 +333,16 @@ export function HabitTracker() {
                       <div className="w-12 h-12 bg-secondary rounded-xl flex items-center justify-center mx-auto mb-2">
                         <i className="fas fa-trophy text-white"></i>
                       </div>
-                      <p className="text-lg font-semibold text-secondary">{selectedHabit.x1}</p>
-                      <p className="text-sm text-muted">Successful days (x1)</p>
+                      <p className="text-lg font-semibold text-secondary">{selectedHabit ? getHabitStreak(selectedHabit.completedDates) : 0}</p>
+                      <p className="text-sm text-muted">Current streak (d)</p>
                     </div>
                     
                     <div className="text-center p-4 bg-warning/10 rounded-xl">
                       <div className="w-12 h-12 bg-warning rounded-xl flex items-center justify-center mx-auto mb-2">
-                        <i className="fas fa-times text-white"></i>
+                        <i className="fas fa-bullseye text-white"></i>
                       </div>
-                      <p className="text-lg font-semibold text-warning">{selectedHabit.x2}</p>
-                      <p className="text-sm text-muted">Missed days (x2)</p>
+                      <p className="text-lg font-semibold text-warning">{(getHabitProgress(selectedHabit).currentValue * 100).toFixed(1)}%</p>
+                      <p className="text-sm text-muted">Habit strength</p>
                     </div>
                     
                     <div className="text-center p-4 bg-primary/10 rounded-xl">

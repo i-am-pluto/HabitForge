@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Chart, registerables } from "chart.js";
-import { generateGraphData, getSuccessfulDaysLast60 } from "@/lib/habitMath";
+import { generateGraphData, getCurrentStreak } from "@/lib/habitMath";
 
 Chart.register(...registerables);
 
@@ -27,8 +27,8 @@ export function HabitGraph({ habit, className = "" }: HabitGraphProps) {
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
 
-    const successfulDays = getSuccessfulDaysLast60(habit.completedDates);
-    const { habitData, thresholdData, currentPoint } = generateGraphData(successfulDays, 60);
+    const currentStreak = getCurrentStreak(habit.completedDates);
+    const { habitData, thresholdData, currentPoint } = generateGraphData(currentStreak, 60);
 
     chartRef.current = new Chart(ctx, {
       type: 'line',
@@ -108,7 +108,7 @@ export function HabitGraph({ habit, className = "" }: HabitGraphProps) {
             position: 'bottom',
             title: {
               display: true,
-              text: 'Successful Days (Last 60 Days)',
+              text: 'Current Streak Days (d)',
               font: {
                 size: 12,
                 weight: 500

@@ -13,7 +13,8 @@ import {
   estimateDaysToHabit,
   getSuccessfulDaysLast60,
   getMissedDaysLast60,
-  isHabitFormed
+  isHabitFormed,
+  getCurrentStreak
 } from "@/lib/habitMath";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -113,13 +114,14 @@ export function useHabits() {
   };
 
   const getHabitProgress = (habit: FrontendHabit): HabitProgress => {
-    const successfulDays = getSuccessfulDaysLast60(habit.completedDates);
+    // Use current streak (consecutive days) for the sigmoid formula
+    const currentStreak = getCurrentStreak(habit.completedDates);
     
-    const currentValue = calculateHabitValue(successfulDays);
-    const progress = calculateProgress(successfulDays);
+    const currentValue = calculateHabitValue(currentStreak);
+    const progress = calculateProgress(currentStreak);
     const status = getHabitStatus(currentValue);
     const successRate = calculateSuccessRate(habit.completedDates, habit.missedDates);
-    const daysToHabit = estimateDaysToHabit(successfulDays);
+    const daysToHabit = estimateDaysToHabit(currentStreak);
     
     return {
       currentValue,
@@ -130,7 +132,7 @@ export function useHabits() {
     };
   };
 
-  const getCurrentStreak = (): number => {
+  const getOverallStreak = (): number => {
     if (habits.length === 0) return 0;
     
     // Calculate overall streak based on any habit completion
@@ -165,7 +167,7 @@ export function useHabits() {
     trackHabit,
     deleteHabit,
     getHabitProgress,
-    getCurrentStreak,
+    getCurrentStreak: getOverallStreak,
     isLoading,
     error,
     isAddingHabit: addHabitMutation.isPending,

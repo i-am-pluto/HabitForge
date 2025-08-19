@@ -97,3 +97,23 @@ export function getSuccessfulDaysLast60(completedDates: string[]): number {
 export function getMissedDaysLast60(missedDates: string[]): number {
   return filterLast60Days(missedDates).length;
 }
+
+// Calculate current streak (consecutive days from today backwards)
+export function getCurrentStreak(completedDates: string[]): number {
+  const today = new Date();
+  let streak = 0;
+  
+  for (let i = 0; i < 365; i++) { // Check up to a year
+    const checkDate = new Date(today);
+    checkDate.setDate(checkDate.getDate() - i);
+    const dateStr = checkDate.toISOString().split('T')[0];
+    
+    if (completedDates.includes(dateStr)) {
+      streak++;
+    } else {
+      break; // Break on first missed day
+    }
+  }
+  
+  return streak;
+}
