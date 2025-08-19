@@ -1,45 +1,59 @@
-export function calculateHabitValue(x1: number, x2: number): number {
-  // Weighted exponential formula: y = 0.5 * e^(0.18*(x1-x2))
-  // This ensures it takes ~20+ days to form a habit with consistent practice
-  return 0.5 * Math.exp(0.18 * (x1 - x2));
+// New sigmoid formula for habit formation
+// H(d) = 1 / (1 + e^{-k(d - d₀)})
+// Where:
+// - d is the number of successful days in last 30 days
+// - k = 0.2 (steepness factor)
+// - d₀ = 0.19 (inflection point where habit strength = 0.5)
+// - 0.5 output represents tipping point where habit formation begins
+export function calculateHabitValue(successfulDays: number): number {
+  const k = 0.2;
+  const d0 = 0.19;
+  const d = successfulDays;
+  
+  const exponent = -k * (d - d0);
+  const result = 1 / (1 + Math.exp(exponent));
+  
+  return result;
 }
 
-export function isHabitFormed(x1: number, x2: number, daysSinceStart: number): boolean {
-  const yValue = calculateHabitValue(x1, x2);
-  return yValue >= daysSinceStart;
+export function isHabitFormed(successfulDays: number): boolean {
+  const habitStrength = calculateHabitValue(successfulDays);
+  return habitStrength >= 0.5; // Tipping point threshold
 }
 
-export function estimateDaysToHabit(x1: number, x2: number, daysSinceStart: number): number {
-  if (isHabitFormed(x1, x2, daysSinceStart)) {
+export function estimateDaysToHabit(currentSuccessfulDays: number): number {
+  if (isHabitFormed(currentSuccessfulDays)) {
     return 0;
   }
   
-  // Estimate how many more successful days needed
-  // Solve for x1 when y = daysSinceStart
-  // daysSinceStart = 0.5 * e^(0.18*(x1_needed - x2))
-  // ln(daysSinceStart / 0.5) = 0.18 * (x1_needed - x2)
-  // x1_needed = (ln(daysSinceStart / 0.5) / 0.18) + x2
+  // Solve for d when H(d) = 0.5 (tipping point)
+  // 0.5 = 1 / (1 + e^{-k(d - d₀)})
+  // Solving: d = d₀ + ln(1) / k = d₀ = 0.19
+  // So we need approximately 1 successful day to reach tipping point
+  const k = 0.2;
+  const d0 = 0.19;
   
-  const targetX1 = Math.max(x1, (Math.log(daysSinceStart / 0.5) / 0.18) + x2);
-  return Math.ceil(targetX1 - x1);
+  // For habit strength of 0.8 (strong habit), solve:
+  // 0.8 = 1 / (1 + e^{-k(d - d₀)})
+  // d = d₀ - ln((1/0.8) - 1) / k
+  const targetStrength = 0.8;
+  const targetDays = d0 - Math.log((1/targetStrength) - 1) / k;
+  
+  return Math.max(0, Math.ceil(targetDays - currentSuccessfulDays));
 }
 
-export function calculateProgress(x1: number, x2: number, daysSinceStart: number): number {
-  const currentValue = calculateHabitValue(x1, x2);
-  const targetValue = daysSinceStart;
+export function calculateProgress(successfulDays: number): number {
+  const habitStrength = calculateHabitValue(successfulDays);
   
-  if (currentValue >= targetValue) {
-    return 100;
-  }
-  
-  // Progress based on how close we are to the target
-  return Math.min(95, (currentValue / targetValue) * 100);
+  // Progress is based on habit strength from 0 to 1
+  // 0.5 = 50% (tipping point), 1.0 = 100% (fully formed)
+  return Math.min(100, habitStrength * 100);
 }
 
-export function getHabitStatus(progress: number): 'struggling' | 'building' | 'formed' {
-  if (progress >= 100) return 'formed';
-  if (progress >= 50) return 'building';
-  return 'struggling';
+export function getHabitStatus(habitStrength: number): 'struggling' | 'building' | 'formed' {
+  if (habitStrength >= 0.8) return 'formed';      // Strong habit (80%+)
+  if (habitStrength >= 0.5) return 'building';    // Past tipping point (50%+)
+  return 'struggling';                             // Below tipping point (<50%)
 }
 
 export function calculateSuccessRate(completedDates: string[], missedDates: string[]): number {
@@ -48,37 +62,38 @@ export function calculateSuccessRate(completedDates: string[], missedDates: stri
   return (completedDates.length / totalDays) * 100;
 }
 
-export function generateGraphData(x1: number, x2: number, maxDays: number = 50, createdAt?: string) {
+export function generateGraphData(successfulDaysLast30: number, maxDays: number = 30) {
   const habitData = [];
   const thresholdData = [];
   
-  // Calculate current day number based on habit creation date
-  const currentDayNumber = createdAt ? getCurrentDayNumber(createdAt) : 1;
-  
-  for (let day = 1; day <= maxDays; day++) {
-    let yValue: number;
+  for (let day = 0; day <= maxDays; day++) {
+    const habitStrength = calculateHabitValue(day);
     
-    if (day <= currentDayNumber) {
-      // For past/current days, use actual progress
-      const actualX1 = Math.min(x1, day); // Can't have more successes than days passed
-      yValue = calculateHabitValue(actualX1, x2);
-    } else {
-      // For future days, project assuming continued success
-      const projectedX1 = x1 + (day - currentDayNumber);
-      yValue = calculateHabitValue(projectedX1, x2);
-    }
-    
-    habitData.push({ x: day, y: yValue });
-    thresholdData.push({ x: day, y: day });
+    habitData.push({ x: day, y: habitStrength });
+    thresholdData.push({ x: day, y: 0.5 }); // Tipping point threshold line
   }
   
-  return { habitData, thresholdData };
+  return { habitData, thresholdData, currentPoint: { x: successfulDaysLast30, y: calculateHabitValue(successfulDaysLast30) } };
 }
 
-function getCurrentDayNumber(createdAt: string): number {
-  const created = new Date(createdAt);
+// Helper function to filter dates to last 30 days
+export function filterLast30Days(dates: string[]): string[] {
   const today = new Date();
-  const diffTime = Math.abs(today.getTime() - created.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays;
+  const thirtyDaysAgo = new Date(today);
+  thirtyDaysAgo.setDate(today.getDate() - 30);
+  
+  return dates.filter(dateStr => {
+    const date = new Date(dateStr);
+    return date >= thirtyDaysAgo && date <= today;
+  });
+}
+
+// Calculate successful days in last 30 days
+export function getSuccessfulDaysLast30(completedDates: string[]): number {
+  return filterLast30Days(completedDates).length;
+}
+
+// Calculate missed days in last 30 days
+export function getMissedDaysLast30(missedDates: string[]): number {
+  return filterLast30Days(missedDates).length;
 }
