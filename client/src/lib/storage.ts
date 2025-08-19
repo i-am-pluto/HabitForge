@@ -8,10 +8,7 @@ type FrontendHabit = z.infer<typeof habitSchema>;
 // API functions for habit management
 export async function loadHabits(): Promise<FrontendHabit[]> {
   try {
-    const response = await fetch('/api/habits');
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+    const response = await apiRequest('GET', '/api/habits');
     const habits = await response.json();
     return habits;
   } catch (error) {
@@ -22,18 +19,7 @@ export async function loadHabits(): Promise<FrontendHabit[]> {
 
 export async function saveHabit(habit: FrontendHabit): Promise<FrontendHabit> {
   try {
-    const response = await fetch(`/api/habits/${habit.id}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(habit)
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
+    const response = await apiRequest('PATCH', `/api/habits/${habit.id}`, habit);
     return await response.json();
   } catch (error) {
     console.error("Error saving habit to database:", error);
@@ -43,18 +29,7 @@ export async function saveHabit(habit: FrontendHabit): Promise<FrontendHabit> {
 
 export async function createHabit(habit: { name: string; category: string }): Promise<FrontendHabit> {
   try {
-    const response = await fetch('/api/habits', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(habit)
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
+    const response = await apiRequest('POST', '/api/habits', habit);
     return await response.json();
   } catch (error) {
     console.error("Error creating habit in database:", error);
