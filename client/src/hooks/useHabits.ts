@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Habit, InsertHabit, HabitProgress } from "@shared/schema";
-import { loadHabits, saveHabits, checkMissedDays } from "@/lib/storage";
+import { loadHabits, saveHabits, checkMissedDays, recordAppAccess } from "@/lib/storage";
 import { 
   calculateHabitValue, 
   calculateProgress, 
@@ -40,6 +40,7 @@ export function useHabits() {
     const updatedHabits = [...habits, newHabit];
     setHabits(updatedHabits);
     saveHabits(updatedHabits);
+    recordAppAccess(); // Record that user is actively using the app
     setSelectedHabitId(newHabit.id);
   };
 
@@ -64,6 +65,7 @@ export function useHabits() {
     
     setHabits(updatedHabits);
     saveHabits(updatedHabits);
+    recordAppAccess(); // Record that user is actively using the app
   };
 
   const getHabitProgress = (habit: Habit): HabitProgress => {
