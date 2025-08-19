@@ -48,14 +48,25 @@ export function calculateSuccessRate(completedDates: string[], missedDates: stri
   return (completedDates.length / totalDays) * 100;
 }
 
-export function generateGraphData(x1: number, x2: number, maxDays: number = 40) {
+export function generateGraphData(x1: number, x2: number, maxDays: number = 50, createdAt?: string) {
   const habitData = [];
   const thresholdData = [];
   
+  // Calculate current day number based on habit creation date
+  const currentDayNumber = createdAt ? getCurrentDayNumber(createdAt) : 1;
+  
   for (let day = 1; day <= maxDays; day++) {
-    // Project habit curve assuming consistent future success
-    const projectedX1 = x1 + Math.max(0, day - getCurrentDayNumber());
-    const yValue = calculateHabitValue(projectedX1, x2);
+    let yValue: number;
+    
+    if (day <= currentDayNumber) {
+      // For past/current days, use actual progress
+      const actualX1 = Math.min(x1, day); // Can't have more successes than days passed
+      yValue = calculateHabitValue(actualX1, x2);
+    } else {
+      // For future days, project assuming continued success
+      const projectedX1 = x1 + (day - currentDayNumber);
+      yValue = calculateHabitValue(projectedX1, x2);
+    }
     
     habitData.push({ x: day, y: yValue });
     thresholdData.push({ x: day, y: day });
@@ -64,8 +75,10 @@ export function generateGraphData(x1: number, x2: number, maxDays: number = 40) 
   return { habitData, thresholdData };
 }
 
-function getCurrentDayNumber(): number {
-  // This would be calculated based on habit start date
-  // For now, return a placeholder
-  return 18;
+function getCurrentDayNumber(createdAt: string): number {
+  const created = new Date(createdAt);
+  const today = new Date();
+  const diffTime = Math.abs(today.getTime() - created.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays;
 }

@@ -4,6 +4,7 @@ import mongoose, { Schema, Document } from "mongoose";
 // Zod schemas for validation
 export const habitSchema = z.object({
   id: z.string(),
+  userId: z.string(),
   name: z.string().min(1, "Habit name is required"),
   category: z.enum([
     "Health & Fitness",
@@ -23,6 +24,7 @@ export const habitSchema = z.object({
 
 export const insertHabitSchema = habitSchema.omit({
   id: true,
+  userId: true,
   x1: true,
   x2: true,
   createdAt: true,
@@ -38,6 +40,7 @@ export type InsertHabit = z.infer<typeof insertHabitSchema>;
 // MongoDB Schema
 export interface IHabit extends Document {
   _id: mongoose.Types.ObjectId;
+  userId: string;
   name: string;
   category: "Health & Fitness" | "Learning" | "Productivity" | "Mindfulness" | "Creative" | "Social";
   x1: number;
@@ -49,6 +52,7 @@ export interface IHabit extends Document {
 }
 
 const habitMongoSchema = new Schema<IHabit>({
+  userId: { type: String, required: true, index: true },
   name: { type: String, required: true },
   category: { 
     type: String, 
@@ -69,6 +73,7 @@ export const HabitModel = mongoose.model<IHabit>('Habit', habitMongoSchema);
 export function habitToFrontend(habit: IHabit): Habit {
   return {
     id: habit._id.toString(),
+    userId: habit.userId,
     name: habit.name,
     category: habit.category,
     x1: habit.x1,

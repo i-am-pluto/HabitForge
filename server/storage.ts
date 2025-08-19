@@ -9,14 +9,15 @@ import connectToDatabase from "./db";
 import mongoose from "mongoose";
 
 export interface IStorage {
-  getHabit(id: string): Promise<Habit | undefined>;
-  getAllHabits(): Promise<Habit[]>;
-  createHabit(habit: InsertHabit): Promise<Habit>;
+  getHabit(id: string, userId: string): Promise<Habit | undefined>;
+  getAllHabits(userId: string): Promise<Habit[]>;
+  createHabit(habit: InsertHabit, userId: string): Promise<Habit>;
   updateHabit(
     id: string,
-    updates: Partial<Omit<Habit, "id">>,
+    userId: string,
+    updates: Partial<Omit<Habit, "id" | "userId">>,
   ): Promise<Habit | undefined>;
-  deleteHabit(id: string): Promise<boolean>;
+  deleteHabit(id: string, userId: string): Promise<boolean>;
 }
 
 // In-memory storage fallback for when MongoDB is not available
@@ -28,20 +29,24 @@ export class MemStorage implements IStorage {
     return `habit_${this.idCounter++}_${Date.now()}`;
   }
 
-  async getHabit(id: string): Promise<Habit | undefined> {
-    return this.habits.get(id);
+  async getHabit(id: string, userId: string): Promise<Habit | undefined> {
+    const habit = this.habits.get(id);
+    return habit && habit.userId === userId ? habit : undefined;
   }
 
-  async getAllHabits(): Promise<Habit[]> {
-    return Array.from(this.habits.values()).sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    );
+  async getAllHabits(userId: string): Promise<Habit[]> {
+    return Array.from(this.habits.values())
+      .filter(habit => habit.userId === userId)
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
   }
 
-  async createHabit(insertHabit: InsertHabit): Promise<Habit> {
+  async createHabit(insertHabit: InsertHabit, userId: string): Promise<Habit> {
     const habit: Habit = {
       id: this.generateId(),
+      userId,
       ...insertHabit,
       x1: 0,
       x2: 0,
@@ -56,17 +61,20 @@ export class MemStorage implements IStorage {
 
   async updateHabit(
     id: string,
-    updates: Partial<Omit<Habit, "id">>,
+    userId: string,
+    updates: Partial<Omit<Habit, "id" | "userId">>,
   ): Promise<Habit | undefined> {
     const habit = this.habits.get(id);
-    if (!habit) return undefined;
+    if (!habit || habit.userId !== userId) return undefined;
 
     const updatedHabit = { ...habit, ...updates };
     this.habits.set(id, updatedHabit);
     return updatedHabit;
   }
 
-  async deleteHabit(id: string): Promise<boolean> {
+  async deleteHabit(id: string, userId: string): Promise<boolean> {
+    const habit = this.habits.get(id);
+    if (!habit || habit.userId !== userId) return false;
     return this.habits.delete(id);
   }
 }
@@ -88,11 +96,11 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getHabit(id: string): Promise<Habit | undefined> {
+  async getHabit(id: string, userId: string): Promise<Habit | undefined> {
     await this.ensureConnection();
 
     if (!this.mongoConnected) {
-      return this.fallback.getHabit(id);
+      return this.fallback.getHabit(id, userId);
     }
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -100,7 +108,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     try {
-      const habit = await HabitModel.findById(id);
+      const habit = await HabitModel.findOne({ _id: id, userId });
       return habit ? habitToFrontend(habit) : undefined;
     } catch (error) {
       console.warn(
@@ -108,19 +116,19 @@ export class DatabaseStorage implements IStorage {
         error instanceof Error ? error.message : "Unknown error",
       );
       this.mongoConnected = false;
-      return this.fallback.getHabit(id);
+      return this.fallback.getHabit(id, userId);
     }
   }
 
-  async getAllHabits(): Promise<Habit[]> {
+  async getAllHabits(userId: string): Promise<Habit[]> {
     await this.ensureConnection();
 
     if (!this.mongoConnected) {
-      return this.fallback.getAllHabits();
+      return this.fallback.getAllHabits(userId);
     }
 
     try {
-      const habits = await HabitModel.find().sort({ createdAt: -1 });
+      const habits = await HabitModel.find({ userId }).sort({ createdAt: -1 });
       return habits.map(habitToFrontend);
     } catch (error) {
       console.warn(
@@ -128,19 +136,20 @@ export class DatabaseStorage implements IStorage {
         error instanceof Error ? error.message : "Unknown error",
       );
       this.mongoConnected = false;
-      return this.fallback.getAllHabits();
+      return this.fallback.getAllHabits(userId);
     }
   }
 
-  async createHabit(insertHabit: InsertHabit): Promise<Habit> {
+  async createHabit(insertHabit: InsertHabit, userId: string): Promise<Habit> {
     await this.ensureConnection();
 
     if (!this.mongoConnected) {
-      return this.fallback.createHabit(insertHabit);
+      return this.fallback.createHabit(insertHabit, userId);
     }
 
     try {
       const habit = new HabitModel({
+        userId,
         ...insertHabit,
         x1: 0,
         x2: 0,
@@ -157,18 +166,19 @@ export class DatabaseStorage implements IStorage {
         error instanceof Error ? error.message : "Unknown error",
       );
       this.mongoConnected = false;
-      return this.fallback.createHabit(insertHabit);
+      return this.fallback.createHabit(insertHabit, userId);
     }
   }
 
   async updateHabit(
     id: string,
-    updates: Partial<Omit<Habit, "id">>,
+    userId: string,
+    updates: Partial<Omit<Habit, "id" | "userId">>,
   ): Promise<Habit | undefined> {
     await this.ensureConnection();
 
     if (!this.mongoConnected) {
-      return this.fallback.updateHabit(id, updates);
+      return this.fallback.updateHabit(id, userId, updates);
     }
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -185,10 +195,14 @@ export class DatabaseStorage implements IStorage {
         mongoUpdates.lastTrackedDate = new Date(mongoUpdates.lastTrackedDate);
       }
 
-      const habit = await HabitModel.findByIdAndUpdate(id, mongoUpdates, {
-        new: true,
-        runValidators: true,
-      });
+      const habit = await HabitModel.findOneAndUpdate(
+        { _id: id, userId },
+        mongoUpdates,
+        {
+          new: true,
+          runValidators: true,
+        }
+      );
 
       return habit ? habitToFrontend(habit) : undefined;
     } catch (error) {
@@ -197,22 +211,22 @@ export class DatabaseStorage implements IStorage {
         error instanceof Error ? error.message : "Unknown error",
       );
       this.mongoConnected = false;
-      return this.fallback.updateHabit(id, updates);
+      return this.fallback.updateHabit(id, userId, updates);
     }
   }
 
-  async deleteHabit(id: string): Promise<boolean> {
+  async deleteHabit(id: string, userId: string): Promise<boolean> {
     await this.ensureConnection();
 
     if (!this.mongoConnected) {
-      return this.fallback.deleteHabit(id);
+      return this.fallback.deleteHabit(id, userId);
     }
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return false;
     }
 
-    const result = await HabitModel.findByIdAndDelete(id);
+    const result = await HabitModel.findOneAndDelete({ _id: id, userId });
     return result !== null;
   }
 }

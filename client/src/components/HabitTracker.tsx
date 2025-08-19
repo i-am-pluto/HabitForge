@@ -6,9 +6,11 @@ import { AddHabitModal } from "./AddHabitModal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { userSession } from "@/lib/userSession";
 
 export function HabitTracker() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState(userSession.getUserId());
   const { 
     habits, 
     selectedHabit, 
@@ -16,8 +18,10 @@ export function HabitTracker() {
     setSelectedHabitId, 
     addHabit, 
     trackHabit, 
+    deleteHabit,
     getHabitProgress, 
-    getCurrentStreak 
+    getCurrentStreak,
+    isDeletingHabit
   } = useHabits();
 
   const currentStreak = getCurrentStreak();
@@ -60,6 +64,19 @@ export function HabitTracker() {
     return Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24)) + 1;
   };
 
+  const handleNewSession = () => {
+    if (confirm('Create a new session? This will start fresh with no habits. Your current session will remain accessible with its unique ID.')) {
+      const newUserId = userSession.createNewSession();
+      setCurrentUserId(newUserId);
+      window.location.reload(); // Reload to clear the cache and start fresh
+    }
+  };
+
+  const copySessionId = () => {
+    navigator.clipboard.writeText(currentUserId);
+    alert('Session ID copied to clipboard! Share this ID with others to give them access to this habit tracker.');
+  };
+
   return (
     <div className="min-h-screen bg-background font-inter">
       {/* Header */}
@@ -81,6 +98,31 @@ export function HabitTracker() {
               <span className="text-sm font-medium text-secondary" data-testid="current-streak">
                 {currentStreak} day streak
               </span>
+            </div>
+            
+            {/* Session Management */}
+            <div className="flex items-center space-x-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={copySessionId}
+                className="text-xs"
+                data-testid="button-share-session"
+              >
+                <i className="fas fa-share mr-1"></i>
+                Share
+              </Button>
+              
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleNewSession}
+                className="text-xs"
+                data-testid="button-new-session"
+              >
+                <i className="fas fa-plus mr-1"></i>
+                New Session
+              </Button>
             </div>
             
             <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
@@ -178,18 +220,36 @@ export function HabitTracker() {
                             {getStatusText(progress.status)}
                           </Badge>
                           
-                          <Button
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              trackHabit(habit.id);
-                            }}
-                            disabled={tracked}
-                            data-testid={`button-track-${habit.id}`}
-                          >
-                            <i className="fas fa-check mr-1"></i>
-                            {tracked ? 'Done!' : 'Done Today'}
-                          </Button>
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                trackHabit(habit.id);
+                              }}
+                              disabled={tracked}
+                              data-testid={`button-track-${habit.id}`}
+                            >
+                              <i className="fas fa-check mr-1"></i>
+                              {tracked ? 'Done!' : 'Done Today'}
+                            </Button>
+                            
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm(`Are you sure you want to delete "${habit.name}"? This action cannot be undone.`)) {
+                                  deleteHabit(habit.id);
+                                }
+                              }}
+                              disabled={isDeletingHabit}
+                              data-testid={`button-delete-${habit.id}`}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <i className="fas fa-trash"></i>
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     );
@@ -317,7 +377,11 @@ export function HabitTracker() {
                     </div>
                   </div>
                   
-                  <HabitGraph x1={selectedHabit.x1} x2={selectedHabit.x2} />
+                  <HabitGraph 
+                    x1={selectedHabit.x1} 
+                    x2={selectedHabit.x2} 
+                    createdAt={selectedHabit.createdAt} 
+                  />
                   
                   <div className="mt-4 p-4 bg-blue-50 rounded-xl">
                     <div className="flex items-start space-x-3">

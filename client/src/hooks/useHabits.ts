@@ -13,6 +13,7 @@ import {
   estimateDaysToHabit
 } from "@/lib/habitMath";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 export function useHabits() {
   const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null);
@@ -82,6 +83,32 @@ export function useHabits() {
     trackHabitMutation.mutate(habitId);
   };
 
+  // Delete habit mutation
+  const deleteHabitMutation = useMutation({
+    mutationFn: async (habitId: string) => {
+      const response = await apiRequest('DELETE', `/api/habits/${habitId}`);
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/habits'] });
+      // If deleted habit was selected, clear selection or select first habit
+      if (selectedHabitId && habits.length > 1) {
+        const remainingHabits = habits.filter(h => h.id !== selectedHabitId);
+        if (remainingHabits.length > 0) {
+          setSelectedHabitId(remainingHabits[0].id);
+        } else {
+          setSelectedHabitId(null);
+        }
+      } else if (habits.length === 1) {
+        setSelectedHabitId(null);
+      }
+    }
+  });
+
+  const deleteHabit = (habitId: string) => {
+    deleteHabitMutation.mutate(habitId);
+  };
+
   const getHabitProgress = (habit: FrontendHabit): HabitProgress => {
     const daysSinceStart = Math.floor(
       (Date.now() - new Date(habit.createdAt).getTime()) / (1000 * 60 * 60 * 24)
@@ -135,11 +162,13 @@ export function useHabits() {
     setSelectedHabitId,
     addHabit,
     trackHabit,
+    deleteHabit,
     getHabitProgress,
     getCurrentStreak,
     isLoading,
     error,
     isAddingHabit: addHabitMutation.isPending,
-    isTrackingHabit: trackHabitMutation.isPending
+    isTrackingHabit: trackHabitMutation.isPending,
+    isDeletingHabit: deleteHabitMutation.isPending
   };
 }

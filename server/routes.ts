@@ -4,11 +4,23 @@ import { storage } from "./storage";
 import { insertHabitSchema, type Habit } from "@shared/schema";
 import { z } from "zod";
 
+// Simple user session middleware 
+function getUserId(req: any): string {
+  // Get user ID from header or generate a new one
+  let userId = req.headers['x-user-id'] as string;
+  if (!userId) {
+    userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+  return userId;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Get all habits
+  // Get all habits for user
   app.get("/api/habits", async (req, res) => {
     try {
-      const habits = await storage.getAllHabits();
+      const userId = getUserId(req);
+      const habits = await storage.getAllHabits(userId);
+      res.setHeader('x-user-id', userId); // Send user ID back to client
       res.json(habits);
     } catch (error) {
       console.error("Error fetching habits:", error);
@@ -19,8 +31,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new habit
   app.post("/api/habits", async (req, res) => {
     try {
+      const userId = getUserId(req);
       const validatedData = insertHabitSchema.parse(req.body);
-      const habit = await storage.createHabit(validatedData);
+      const habit = await storage.createHabit(validatedData, userId);
+      res.setHeader('x-user-id', userId);
       res.status(201).json(habit);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -35,6 +49,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update a habit
   app.patch("/api/habits/:id", async (req, res) => {
     try {
+      const userId = getUserId(req);
       const { id } = req.params;
       const updates = req.body;
       
@@ -43,11 +58,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updates.lastTrackedDate = new Date(updates.lastTrackedDate);
       }
       
-      const habit = await storage.updateHabit(id, updates);
+      const habit = await storage.updateHabit(id, userId, updates);
       if (!habit) {
         return res.status(404).json({ error: "Habit not found" });
       }
       
+      res.setHeader('x-user-id', userId);
       res.json(habit);
     } catch (error) {
       console.error("Error updating habit:", error);
@@ -58,11 +74,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete a habit
   app.delete("/api/habits/:id", async (req, res) => {
     try {
+      const userId = getUserId(req);
       const { id } = req.params;
-      const success = await storage.deleteHabit(id);
+      const success = await storage.deleteHabit(id, userId);
       if (!success) {
         return res.status(404).json({ error: "Habit not found" });
       }
+      res.setHeader('x-user-id', userId);
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting habit:", error);

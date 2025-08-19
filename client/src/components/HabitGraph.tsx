@@ -7,10 +7,11 @@ Chart.register(...registerables);
 interface HabitGraphProps {
   x1: number;
   x2: number;
+  createdAt: string;
   className?: string;
 }
 
-export function HabitGraph({ x1, x2, className = "" }: HabitGraphProps) {
+export function HabitGraph({ x1, x2, createdAt, className = "" }: HabitGraphProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const chartRef = useRef<Chart | null>(null);
 
@@ -25,7 +26,7 @@ export function HabitGraph({ x1, x2, className = "" }: HabitGraphProps) {
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
 
-    const { habitData, thresholdData } = generateGraphData(x1, x2, 40);
+    const { habitData, thresholdData } = generateGraphData(x1, x2, 50, createdAt);
 
     chartRef.current = new Chart(ctx, {
       type: 'line',
