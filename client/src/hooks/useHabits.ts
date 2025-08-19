@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
-import { Habit, InsertHabit, HabitProgress } from "@shared/schema";
-import { loadHabits, saveHabits, checkMissedDays, recordAppAccess } from "@/lib/storage";
+import { habitSchema, InsertHabit, HabitProgress } from "@shared/schema";
+import { z } from "zod";
+import { loadHabits, saveHabit, checkMissedDays, createHabit } from "@/lib/storage";
+
+// Use the frontend-compatible habit type with string dates
+type FrontendHabit = z.infer<typeof habitSchema>;
 import { 
   calculateHabitValue, 
   calculateProgress, 
@@ -8,67 +12,77 @@ import {
   calculateSuccessRate,
   estimateDaysToHabit
 } from "@/lib/habitMath";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export function useHabits() {
-  const [habits, setHabits] = useState<Habit[]>([]);
   const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  // Load habits from database
+  const { data: habits = [], isLoading, error } = useQuery({
+    queryKey: ['/api/habits'],
+    queryFn: async () => {
+      const habits = await loadHabits();
+      // Check for missed days after loading
+      return await checkMissedDays(habits);
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: true
+  });
 
   useEffect(() => {
-    // Check for missed days on load
-    checkMissedDays();
-    const loadedHabits = loadHabits();
-    setHabits(loadedHabits);
-    
-    if (loadedHabits.length > 0 && !selectedHabitId) {
-      setSelectedHabitId(loadedHabits[0].id);
+    if (habits.length > 0 && !selectedHabitId) {
+      setSelectedHabitId(habits[0].id);
     }
-  }, [selectedHabitId]);
+  }, [habits, selectedHabitId]);
 
   const selectedHabit = habits.find(h => h.id === selectedHabitId);
 
+  // Create habit mutation
+  const addHabitMutation = useMutation({
+    mutationFn: createHabit,
+    onSuccess: (newHabit) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/habits'] });
+      setSelectedHabitId(newHabit.id);
+    }
+  });
+
   const addHabit = (insertHabit: InsertHabit) => {
-    const newHabit: Habit = {
-      ...insertHabit,
-      id: crypto.randomUUID(),
-      x1: 0,
-      x2: 0,
-      createdAt: new Date().toISOString(),
-      completedDates: [],
-      missedDates: []
-    };
-    
-    const updatedHabits = [...habits, newHabit];
-    setHabits(updatedHabits);
-    saveHabits(updatedHabits);
-    recordAppAccess(); // Record that user is actively using the app
-    setSelectedHabitId(newHabit.id);
+    addHabitMutation.mutate(insertHabit);
   };
 
-  const trackHabit = (habitId: string) => {
-    const today = new Date().toISOString().split('T')[0];
-    
-    const updatedHabits = habits.map(habit => {
-      if (habit.id !== habitId) return habit;
+  // Track habit mutation
+  const trackHabitMutation = useMutation({
+    mutationFn: async (habitId: string) => {
+      const habit = habits.find(h => h.id === habitId);
+      if (!habit) throw new Error('Habit not found');
+      
+      const today = new Date().toISOString().split('T')[0];
       
       // Check if already tracked today
       if (habit.completedDates.includes(today)) {
         return habit;
       }
       
-      return {
+      const updatedHabit = {
         ...habit,
         x1: habit.x1 + 1,
         lastTrackedDate: new Date().toISOString(),
         completedDates: [...habit.completedDates, today]
       };
-    });
-    
-    setHabits(updatedHabits);
-    saveHabits(updatedHabits);
-    recordAppAccess(); // Record that user is actively using the app
+      
+      return await saveHabit(updatedHabit);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/habits'] });
+    }
+  });
+
+  const trackHabit = (habitId: string) => {
+    trackHabitMutation.mutate(habitId);
   };
 
-  const getHabitProgress = (habit: Habit): HabitProgress => {
+  const getHabitProgress = (habit: FrontendHabit): HabitProgress => {
     const daysSinceStart = Math.floor(
       (Date.now() - new Date(habit.createdAt).getTime()) / (1000 * 60 * 60 * 24)
     ) + 1;
@@ -122,6 +136,10 @@ export function useHabits() {
     addHabit,
     trackHabit,
     getHabitProgress,
-    getCurrentStreak
+    getCurrentStreak,
+    isLoading,
+    error,
+    isAddingHabit: addHabitMutation.isPending,
+    isTrackingHabit: trackHabitMutation.isPending
   };
 }

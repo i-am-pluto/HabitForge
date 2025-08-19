@@ -1,7 +1,11 @@
-import { Habit } from "@shared/schema";
+import { habitSchema } from "@shared/schema";
+import { z } from "zod";
+
+// Use the frontend-compatible habit type with string dates
+type FrontendHabit = z.infer<typeof habitSchema>;
 
 interface HabitCalendarProps {
-  habit: Habit;
+  habit: FrontendHabit;
 }
 
 export function HabitCalendar({ habit }: HabitCalendarProps) {

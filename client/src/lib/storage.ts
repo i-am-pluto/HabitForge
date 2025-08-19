@@ -1,64 +1,82 @@
-import { Habit } from "@shared/schema";
+import { habitSchema } from "@shared/schema";
+import { z } from "zod";
+import { apiRequest } from "./queryClient";
 
-const STORAGE_KEY = "habit_tracker_data";
+// Use the legacy schema type that has string dates for frontend compatibility
+type FrontendHabit = z.infer<typeof habitSchema>;
 
-export interface StorageData {
-  habits: Habit[];
-  lastUpdated: string;
-  lastAppAccess: string; // Track when the app was last opened
-}
-
-export function loadHabits(): Habit[] {
+// API functions for habit management
+export async function loadHabits(): Promise<FrontendHabit[]> {
   try {
-    const data = localStorage.getItem(STORAGE_KEY);
-    if (!data) return [];
-    
-    const parsed: StorageData = JSON.parse(data);
-    
-    // Log info about last access for debugging
-    if (parsed.lastAppAccess) {
-      const lastAccess = new Date(parsed.lastAppAccess);
-      const now = new Date();
-      const daysSinceAccess = Math.floor((now.getTime() - lastAccess.getTime()) / (1000 * 60 * 60 * 24));
-      if (daysSinceAccess > 0) {
-        console.log(`[Habit Tracker] App was last accessed ${daysSinceAccess} day(s) ago`);
-      }
+    const response = await fetch('/api/habits');
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-    
-    return parsed.habits || [];
+    const habits = await response.json();
+    return habits;
   } catch (error) {
-    console.error("Error loading habits from localStorage:", error);
+    console.error("Error loading habits from database:", error);
     return [];
   }
 }
 
-export function saveHabits(habits: Habit[]): void {
+export async function saveHabit(habit: FrontendHabit): Promise<FrontendHabit> {
   try {
-    const data: StorageData = {
-      habits,
-      lastUpdated: new Date().toISOString(),
-      lastAppAccess: new Date().toISOString()
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    const response = await fetch(`/api/habits/${habit.id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(habit)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
   } catch (error) {
-    console.error("Error saving habits to localStorage:", error);
+    console.error("Error saving habit to database:", error);
+    throw error;
   }
 }
 
-export function checkMissedDays(): void {
-  const habits = loadHabits();
+export async function createHabit(habit: { name: string; category: string }): Promise<FrontendHabit> {
+  try {
+    const response = await fetch('/api/habits', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(habit)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error creating habit in database:", error);
+    throw error;
+  }
+}
+
+export async function checkMissedDays(habits: FrontendHabit[]): Promise<FrontendHabit[]> {
   const today = new Date().toISOString().split('T')[0];
-  let hasChanges = false;
   
   console.log(`[Habit Tracker] Checking for missed days since last app session (today: ${today})`);
   
-  const updatedHabits = habits.map(habit => {
+  const updatedHabits = [];
+  
+  for (const habit of habits) {
     const lastTracked = habit.lastTrackedDate?.split('T')[0];
-    const createdDate = new Date(habit.createdAt).toISOString().split('T')[0];
+    const createdDate = habit.createdAt.split('T')[0];
     
     // If habit was created today or already tracked today, no missed days
     if (createdDate === today || lastTracked === today) {
-      return habit;
+      updatedHabits.push(habit);
+      continue;
     }
     
     // Determine starting point for missed day calculation
@@ -90,34 +108,30 @@ export function checkMissedDays(): void {
     }
     
     if (missedDays.length > 0) {
-      hasChanges = true;
       console.log(`[Habit Tracker] Habit "${habit.name}": Adding ${missedDays.length} missed days since ${startDate}`);
-      return {
+      const updatedHabit = {
         ...habit,
         x2: habit.x2 + missedDays.length,
         missedDates: [...habit.missedDates, ...missedDays]
       };
+      
+      try {
+        const savedHabit = await saveHabit(updatedHabit);
+        updatedHabits.push(savedHabit);
+      } catch (error) {
+        console.error(`Failed to save missed days for habit "${habit.name}":`, error);
+        updatedHabits.push(habit);
+      }
+    } else {
+      updatedHabits.push(habit);
     }
-    
-    return habit;
-  });
-  
-  if (hasChanges) {
-    saveHabits(updatedHabits);
-    console.log(`[Habit Tracker] Updated habits with missed days and saved to localStorage`);
-  } else {
-    console.log(`[Habit Tracker] No missed days to update`);
   }
+  
+  console.log(`[Habit Tracker] Finished checking missed days`);
+  return updatedHabits;
 }
 
-// Function to record that the app was accessed
+// Function to record that the app was accessed (no longer needed with database)
 export function recordAppAccess(): void {
-  const habits = loadHabits();
-  saveHabits(habits); // This will update the lastAppAccess timestamp
+  // No-op since we're using database now
 }
-
-// Auto-check for missed days when the app loads
-// This ensures that when the server restarts after being shut down,
-// all missed days are properly calculated and x2 values are updated
-checkMissedDays();
-recordAppAccess();
