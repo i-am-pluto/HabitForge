@@ -43,11 +43,17 @@ Preferred communication style: Simple, everyday language.
 - **Progress Visualization**: Real-time sigmoid curve with current position marker
 
 ### Component Architecture
-- **HabitTracker**: Main container component managing overall state and layout
+- **HabitTracker**: Main container component managing overall state and layout with category-wise habit organization
 - **HabitGraph**: Chart.js integration for visualizing mathematical habit progression
 - **HabitCalendar**: Monthly calendar view showing completion/missed day patterns
 - **AddHabitModal**: Form modal for creating new habits with category selection
 - **Custom Hooks**: useHabits hook encapsulating all habit-related business logic and state management
+
+### UI Features (Updated August 2025)
+- **Category-wise Organization**: Habits grouped by categories (Health & Fitness, Learning, Productivity, Mindfulness, Creative, Social) with dedicated icons and section headers
+- **Compact Display**: Streamlined habit cards with essential metrics (streak, strength percentage, status)
+- **Visual Hierarchy**: Category sections with dividers and habit counts for better organization
+- **Interactive Elements**: Track and delete buttons for each habit within category groups
 
 ## External Dependencies
 

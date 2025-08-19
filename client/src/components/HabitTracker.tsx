@@ -150,110 +150,139 @@ export function HabitTracker() {
                     <p className="text-muted mb-4">No habits yet. Start your journey!</p>
                   </div>
                 ) : (
-                  habits.map(habit => {
-                    const progress = getHabitProgress(habit);
-                    const isSelected = habit.id === selectedHabitId;
-                    const tracked = isTrackedToday(habit.id);
-                    
-                    return (
-                      <div
-                        key={habit.id}
-                        className={`habit-item p-4 rounded-xl border transition-all cursor-pointer ${
-                          isSelected 
-                            ? 'ring-2 ring-primary bg-primary/5 border-primary/20' 
-                            : 'bg-gray-50 border-gray-100 hover:bg-gray-100'
-                        }`}
-                        onClick={() => setSelectedHabitId(habit.id)}
-                        data-testid={`habit-item-${habit.id}`}
-                      >
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className="font-medium text-gray-900">{habit.name}</h3>
-                          <div className="relative w-8 h-8">
-                            <svg className="habit-progress-ring w-8 h-8 transform -rotate-90" viewBox="0 0 36 36">
-                              <path 
-                                className="text-gray-200" 
-                                stroke="currentColor" 
-                                strokeWidth="3" 
-                                fill="none" 
-                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                              />
-                              <path 
-                                className="text-primary" 
-                                stroke="currentColor" 
-                                strokeWidth="3" 
-                                fill="none" 
-                                strokeDasharray={`${progress.progress}, 100`}
-                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                              />
-                            </svg>
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <span className="text-xs font-medium text-gray-700">
-                                {Math.round(progress.progress)}%
-                              </span>
-                            </div>
-                          </div>
+                  (() => {
+                    // Group habits by category
+                    const habitsByCategory = habits.reduce((acc, habit) => {
+                      if (!acc[habit.category]) {
+                        acc[habit.category] = [];
+                      }
+                      acc[habit.category].push(habit);
+                      return acc;
+                    }, {} as Record<string, typeof habits>);
+
+                    // Define category icons
+                    const categoryIcons: Record<string, string> = {
+                      "Health & Fitness": "fas fa-heartbeat",
+                      "Learning": "fas fa-book",
+                      "Productivity": "fas fa-tasks",
+                      "Mindfulness": "fas fa-leaf",
+                      "Creative": "fas fa-palette",
+                      "Social": "fas fa-users"
+                    };
+
+                    return Object.entries(habitsByCategory).map(([category, categoryHabits]) => (
+                      <div key={category} className="space-y-3">
+                        {/* Category Header */}
+                        <div className="flex items-center space-x-2 px-2">
+                          <i className={`${categoryIcons[category]} text-primary text-sm`}></i>
+                          <h4 className="font-medium text-gray-900 text-sm">{category}</h4>
+                          <div className="flex-1 h-px bg-gray-200"></div>
+                          <span className="text-xs text-muted">{categoryHabits.length}</span>
                         </div>
-                        
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center space-x-4">
-                            <div className="text-center">
-                              <p className="text-sm font-medium text-secondary">{habit.x1}</p>
-                              <p className="text-xs text-muted">Success (x1)</p>
-                            </div>
-                            <div className="text-center">
-                              <p className="text-sm font-medium text-warning">{habit.x2}</p>
-                              <p className="text-xs text-muted">Missed (x2)</p>
-                            </div>
-                          </div>
-                          
-                          <div className="text-right">
-                            <p className="text-sm font-medium text-gray-900">
-                              {progress.currentValue.toFixed(2)}
-                            </p>
-                            <p className="text-xs text-muted">Current y-value</p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center justify-between">
-                          <Badge className={getStatusColor(progress.status)}>
-                            <i className={`${getStatusIcon(progress.status)} mr-1`}></i>
-                            {getStatusText(progress.status)}
-                          </Badge>
-                          
-                          <div className="flex items-center space-x-2">
-                            <Button
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                trackHabit(habit.id);
-                              }}
-                              disabled={tracked}
-                              data-testid={`button-track-${habit.id}`}
-                            >
-                              <i className="fas fa-check mr-1"></i>
-                              {tracked ? 'Done!' : 'Done Today'}
-                            </Button>
+
+                        {/* Habits in this category */}
+                        <div className="space-y-2">
+                          {categoryHabits.map(habit => {
+                            const progress = getHabitProgress(habit);
+                            const isSelected = habit.id === selectedHabitId;
+                            const tracked = isTrackedToday(habit.id);
                             
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (confirm(`Are you sure you want to delete "${habit.name}"? This action cannot be undone.`)) {
-                                  deleteHabit(habit.id);
-                                }
-                              }}
-                              disabled={isDeletingHabit}
-                              data-testid={`button-delete-${habit.id}`}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <i className="fas fa-trash"></i>
-                            </Button>
-                          </div>
+                            return (
+                              <div
+                                key={habit.id}
+                                className={`habit-item p-3 rounded-xl border transition-all cursor-pointer ${
+                                  isSelected 
+                                    ? 'ring-2 ring-primary bg-primary/5 border-primary/20' 
+                                    : 'bg-gray-50 border-gray-100 hover:bg-gray-100'
+                                }`}
+                                onClick={() => setSelectedHabitId(habit.id)}
+                                data-testid={`habit-item-${habit.id}`}
+                              >
+                                <div className="flex items-center justify-between mb-2">
+                                  <h3 className="font-medium text-gray-900 text-sm">{habit.name}</h3>
+                                  <div className="relative w-6 h-6">
+                                    <svg className="habit-progress-ring w-6 h-6 transform -rotate-90" viewBox="0 0 36 36">
+                                      <path 
+                                        className="text-gray-200" 
+                                        stroke="currentColor" 
+                                        strokeWidth="4" 
+                                        fill="none" 
+                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                      />
+                                      <path 
+                                        className="text-primary" 
+                                        stroke="currentColor" 
+                                        strokeWidth="4" 
+                                        fill="none" 
+                                        strokeDasharray={`${progress.progress}, 100`}
+                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                      />
+                                    </svg>
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                      <span className="text-xs font-medium text-gray-700">
+                                        {Math.round(progress.progress)}%
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center space-x-3">
+                                    <div className="text-center">
+                                      <p className="text-xs font-medium text-secondary">{getHabitStreak(habit.completedDates)}</p>
+                                      <p className="text-xs text-muted">Streak</p>
+                                    </div>
+                                    <div className="text-center">
+                                      <p className="text-xs font-medium text-gray-900">
+                                        {(progress.currentValue * 100).toFixed(0)}%
+                                      </p>
+                                      <p className="text-xs text-muted">Strength</p>
+                                    </div>
+                                  </div>
+                                  
+                                  <Badge className={`${getStatusColor(progress.status)} text-xs`}>
+                                    {getStatusText(progress.status)}
+                                  </Badge>
+                                </div>
+                                
+                                <div className="flex items-center space-x-2">
+                                  <Button
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      trackHabit(habit.id);
+                                    }}
+                                    disabled={tracked}
+                                    data-testid={`button-track-${habit.id}`}
+                                    className="flex-1 h-8 text-xs"
+                                  >
+                                    <i className="fas fa-check mr-1"></i>
+                                    {tracked ? 'Done!' : 'Done Today'}
+                                  </Button>
+                                  
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (confirm(`Are you sure you want to delete "${habit.name}"? This action cannot be undone.`)) {
+                                        deleteHabit(habit.id);
+                                      }
+                                    }}
+                                    disabled={isDeletingHabit}
+                                    data-testid={`button-delete-${habit.id}`}
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
+                                  >
+                                    <i className="fas fa-trash text-xs"></i>
+                                  </Button>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
-                    );
-                  })
+                    ));
+                  })()
                 )}
                 
                 <Button
