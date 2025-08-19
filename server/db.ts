@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 // Use environment variable or fall back to a working demo connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://habituser:habitpass123@cluster0.abcdef.mongodb.net/habits?retryWrites=true&w=majority';
 
+console.log("Using MongoDB URI:", MONGODB_URI);
 // Global is used here to maintain a cached connection across hot reloads in development
 let cached = (global as any).mongoose;
 

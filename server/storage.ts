@@ -1,4 +1,10 @@
-import { HabitModel, type Habit, type InsertHabit, type IHabit, habitToFrontend } from "@shared/schema";
+import {
+  HabitModel,
+  type Habit,
+  type InsertHabit,
+  type IHabit,
+  habitToFrontend,
+} from "@shared/schema";
 import connectToDatabase from "./db";
 import mongoose from "mongoose";
 
@@ -6,7 +12,10 @@ export interface IStorage {
   getHabit(id: string): Promise<Habit | undefined>;
   getAllHabits(): Promise<Habit[]>;
   createHabit(habit: InsertHabit): Promise<Habit>;
-  updateHabit(id: string, updates: Partial<Omit<Habit, 'id'>>): Promise<Habit | undefined>;
+  updateHabit(
+    id: string,
+    updates: Partial<Omit<Habit, "id">>,
+  ): Promise<Habit | undefined>;
   deleteHabit(id: string): Promise<boolean>;
 }
 
@@ -24,8 +33,9 @@ export class MemStorage implements IStorage {
   }
 
   async getAllHabits(): Promise<Habit[]> {
-    return Array.from(this.habits.values()).sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    return Array.from(this.habits.values()).sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
   }
 
@@ -37,14 +47,17 @@ export class MemStorage implements IStorage {
       x2: 0,
       createdAt: new Date().toISOString(),
       completedDates: [],
-      missedDates: []
+      missedDates: [],
     };
-    
+
     this.habits.set(habit.id, habit);
     return habit;
   }
 
-  async updateHabit(id: string, updates: Partial<Omit<Habit, 'id'>>): Promise<Habit | undefined> {
+  async updateHabit(
+    id: string,
+    updates: Partial<Omit<Habit, "id">>,
+  ): Promise<Habit | undefined> {
     const habit = this.habits.get(id);
     if (!habit) return undefined;
 
@@ -67,14 +80,17 @@ export class DatabaseStorage implements IStorage {
       await connectToDatabase();
       this.mongoConnected = true;
     } catch (error) {
-      console.log('MongoDB connection failed, using in-memory storage as fallback');
+      console.error("MongoDB connection error:", error);
+      console.log(
+        "MongoDB connection failed, using in-memory storage as fallback",
+      );
       this.mongoConnected = false;
     }
   }
 
   async getHabit(id: string): Promise<Habit | undefined> {
     await this.ensureConnection();
-    
+
     if (!this.mongoConnected) {
       return this.fallback.getHabit(id);
     }
@@ -87,7 +103,10 @@ export class DatabaseStorage implements IStorage {
       const habit = await HabitModel.findById(id);
       return habit ? habitToFrontend(habit) : undefined;
     } catch (error) {
-      console.warn('MongoDB read failed, falling back to memory storage:', error instanceof Error ? error.message : 'Unknown error');
+      console.warn(
+        "MongoDB read failed, falling back to memory storage:",
+        error instanceof Error ? error.message : "Unknown error",
+      );
       this.mongoConnected = false;
       return this.fallback.getHabit(id);
     }
@@ -95,7 +114,7 @@ export class DatabaseStorage implements IStorage {
 
   async getAllHabits(): Promise<Habit[]> {
     await this.ensureConnection();
-    
+
     if (!this.mongoConnected) {
       return this.fallback.getAllHabits();
     }
@@ -104,7 +123,10 @@ export class DatabaseStorage implements IStorage {
       const habits = await HabitModel.find().sort({ createdAt: -1 });
       return habits.map(habitToFrontend);
     } catch (error) {
-      console.warn('MongoDB read failed, falling back to memory storage:', error instanceof Error ? error.message : 'Unknown error');
+      console.warn(
+        "MongoDB read failed, falling back to memory storage:",
+        error instanceof Error ? error.message : "Unknown error",
+      );
       this.mongoConnected = false;
       return this.fallback.getAllHabits();
     }
@@ -112,7 +134,7 @@ export class DatabaseStorage implements IStorage {
 
   async createHabit(insertHabit: InsertHabit): Promise<Habit> {
     await this.ensureConnection();
-    
+
     if (!this.mongoConnected) {
       return this.fallback.createHabit(insertHabit);
     }
@@ -124,21 +146,27 @@ export class DatabaseStorage implements IStorage {
         x2: 0,
         completedDates: [],
         missedDates: [],
-        createdAt: new Date()
+        createdAt: new Date(),
       });
-      
+
       await habit.save();
       return habitToFrontend(habit);
     } catch (error) {
-      console.warn('MongoDB write failed, falling back to memory storage:', error instanceof Error ? error.message : 'Unknown error');
+      console.warn(
+        "MongoDB write failed, falling back to memory storage:",
+        error instanceof Error ? error.message : "Unknown error",
+      );
       this.mongoConnected = false;
       return this.fallback.createHabit(insertHabit);
     }
   }
 
-  async updateHabit(id: string, updates: Partial<Omit<Habit, 'id'>>): Promise<Habit | undefined> {
+  async updateHabit(
+    id: string,
+    updates: Partial<Omit<Habit, "id">>,
+  ): Promise<Habit | undefined> {
     await this.ensureConnection();
-    
+
     if (!this.mongoConnected) {
       return this.fallback.updateHabit(id, updates);
     }
@@ -157,15 +185,17 @@ export class DatabaseStorage implements IStorage {
         mongoUpdates.lastTrackedDate = new Date(mongoUpdates.lastTrackedDate);
       }
 
-      const habit = await HabitModel.findByIdAndUpdate(
-        id, 
-        mongoUpdates, 
-        { new: true, runValidators: true }
-      );
-      
+      const habit = await HabitModel.findByIdAndUpdate(id, mongoUpdates, {
+        new: true,
+        runValidators: true,
+      });
+
       return habit ? habitToFrontend(habit) : undefined;
     } catch (error) {
-      console.warn('MongoDB update failed, falling back to memory storage:', error instanceof Error ? error.message : 'Unknown error');
+      console.warn(
+        "MongoDB update failed, falling back to memory storage:",
+        error instanceof Error ? error.message : "Unknown error",
+      );
       this.mongoConnected = false;
       return this.fallback.updateHabit(id, updates);
     }
@@ -173,7 +203,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteHabit(id: string): Promise<boolean> {
     await this.ensureConnection();
-    
+
     if (!this.mongoConnected) {
       return this.fallback.deleteHabit(id);
     }
