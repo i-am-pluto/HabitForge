@@ -67,7 +67,7 @@ export class DatabaseStorage implements IStorage {
       await connectToDatabase();
       this.mongoConnected = true;
     } catch (error) {
-      console.warn('MongoDB connection failed, using in-memory storage:', error instanceof Error ? error.message : 'Unknown error');
+      console.log('MongoDB connection failed, using in-memory storage as fallback');
       this.mongoConnected = false;
     }
   }
