@@ -305,7 +305,7 @@ export function HabitTracker() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-muted mb-1">Current Formula</p>
-                        <p className="font-mono text-lg text-gray-900">H(d) = 1 / (1 + e^(-0.2(d - 0.19)))</p>
+                        <p className="font-mono text-lg text-gray-900">H(d) = 1 / (1 + e^(-0.19(d - 25)))</p>
                         <p className="text-sm text-muted mt-1">
                           H({selectedHabit ? getHabitStreak(selectedHabit.completedDates) : 0}) = {' '}
                           <span className="font-semibold text-primary">
@@ -363,7 +363,7 @@ export function HabitTracker() {
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">Mathematical Formula</h3>
                     <div className="bg-white p-4 rounded-lg border border-blue-200 mb-4">
                       <p className="text-2xl font-mono text-blue-800 font-semibold">
-                        H(d) = 1 / (1 + e^(-0.2(d - 0.19)))
+                        H(d) = 1 / (1 + e^(-0.19(d - 25)))
                       </p>
                     </div>
                     <div className="grid grid-cols-2 gap-4 text-sm">
@@ -372,8 +372,8 @@ export function HabitTracker() {
                         <p><span className="font-semibold">d:</span> Current streak day</p>
                       </div>
                       <div className="text-left">
-                        <p><span className="font-semibold">k = 0.2:</span> Steepness factor</p>
-                        <p><span className="font-semibold">d₀ = 0.19:</span> Inflection point</p>
+                        <p><span className="font-semibold">k = 0.19:</span> Steepness factor</p>
+                        <p><span className="font-semibold">d₀ = 25:</span> Inflection point</p>
                       </div>
                     </div>
                     <p className="text-sm text-blue-700 mt-3 font-medium">
@@ -393,7 +393,7 @@ export function HabitTracker() {
                     <div className="flex items-center space-x-4">
                       <div className="flex items-center space-x-2">
                         <div className="w-3 h-3 bg-primary rounded-full"></div>
-                        <span className="text-sm text-muted">Habit Strength (H(d) = 1/(1+e^(-0.2(d-0.19))))</span>
+                        <span className="text-sm text-muted">Habit Strength (H(d) = 1/(1+e^(-0.19(d-25))))</span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
@@ -414,7 +414,7 @@ export function HabitTracker() {
                       <div>
                         <p className="text-sm font-medium text-gray-900">How it works</p>
                         <p className="text-sm text-muted mt-1">
-                          Your habit strength follows the sigmoid formula H(d) = 1/(1+e^(-0.2(d-0.19))) where d is your current streak day. When you reach 0.5 (50%), you've hit the tipping point where habit formation begins accelerating.
+                          Your habit strength follows the sigmoid formula H(d) = 1/(1+e^(-0.19(d-25))) where d is your current streak day. When you reach 0.5 (50%), you've hit the tipping point where habit formation begins accelerating.
                         </p>
                       </div>
                     </div>

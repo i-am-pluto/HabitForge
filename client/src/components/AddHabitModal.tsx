@@ -96,7 +96,7 @@ export function AddHabitModal({ isOpen, onClose, onAdd }: AddHabitModalProps) {
                 <div>
                   <p className="text-sm font-medium text-gray-900">How it works</p>
                   <p className="text-sm text-muted mt-1">
-                    Your habit will be tracked using the sigmoid formula H(d) = 1/(1+e^(-0.2(d-0.19))). Build consecutive days (d) to increase habit strength. Tipping point at 0.5 (50%).
+                    Your habit will be tracked using the sigmoid formula H(d) = 1/(1+e^(-0.19(d-25))). Build consecutive days (d) to increase habit strength. Tipping point at 0.5 (50%).
                   </p>
                 </div>
               </div>

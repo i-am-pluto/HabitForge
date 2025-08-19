@@ -2,12 +2,12 @@
 // H(d) = 1 / (1 + e^{-k(d - d₀)})
 // Where:
 // - d is the current day number of streak (Day 1, 2, 3...)
-// - k = 0.2 (steepness factor - determines how quickly habit forms)
-// - d₀ = 0.19 (inflection point where habit strength = 0.5, the tipping point)
+// - k = 0.19 (steepness factor - determines how quickly habit forms)
+// - d₀ = 25 (inflection point where habit strength = 0.5, the tipping point)
 // - 0.5 output represents tipping point where habit formation begins
 export function calculateHabitValue(streakDays: number): number {
-  const k = 0.2;
-  const d0 = 0.19;
+  const k = 0.19;
+  const d0 = 25;
   const d = streakDays;
   
   const exponent = -k * (d - d0);
@@ -28,10 +28,10 @@ export function estimateDaysToHabit(currentSuccessfulDays: number): number {
   
   // Solve for d when H(d) = 0.5 (tipping point)
   // 0.5 = 1 / (1 + e^{-k(d - d₀)})
-  // Solving: d = d₀ + ln(1) / k = d₀ = 0.19
-  // So we need approximately 1 successful day to reach tipping point
-  const k = 0.2;
-  const d0 = 0.19;
+  // Solving: d = d₀ + ln(1) / k = d₀ = 25
+  // So we need approximately 25 successful days to reach tipping point
+  const k = 0.19;
+  const d0 = 25;
   
   // For habit strength of 0.8 (strong habit), solve:
   // 0.8 = 1 / (1 + e^{-k(d - d₀)})

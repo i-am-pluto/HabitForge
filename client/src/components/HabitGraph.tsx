@@ -35,7 +35,7 @@ export function HabitGraph({ habit, className = "" }: HabitGraphProps) {
       data: {
         datasets: [
           {
-            label: 'Habit Strength (H(d) = 1/(1+e^(-0.2(d-0.19))))',
+            label: 'Habit Strength (H(d) = 1/(1+e^(-0.19(d-25))))',
             data: habitData,
             borderColor: '#3B82F6',
             backgroundColor: 'rgba(59, 130, 246, 0.1)',
