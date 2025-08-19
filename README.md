@@ -62,8 +62,16 @@ A modern habit tracking web application that uses exponential mathematical funct
    - Add environment variable: `MONGODB_URI` with your MongoDB Atlas connection string
 
 3. **Deploy:**
-   - Vercel will automatically build and deploy your app
-   - Your app will be available at `https://your-app-name.vercel.app`
+   ```bash
+   # Full deployment with checks
+   ./deploy.sh
+   
+   # Quick deployment
+   ./deploy-quick.sh
+   
+   # Manual deployment
+   npm run build && vercel --prod
+   ```
 
 ## Environment Variables
 

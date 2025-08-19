@@ -32,6 +32,18 @@
 2. Make sure all your changes are committed to your repository
 
 #### Step 3: Deploy to Vercel
+
+**Option 1: One-command deployment (Recommended)**
+```bash
+./deploy.sh
+```
+
+**Option 2: Quick deployment**
+```bash
+./deploy-quick.sh
+```
+
+**Option 3: Manual Vercel dashboard**
 1. Go to [Vercel](https://vercel.com) and sign up/login
 2. Click "New Project"
 3. Import your repository
