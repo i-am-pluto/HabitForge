@@ -1,45 +1,88 @@
-import { habits, type Habit, type InsertHabit } from "@shared/schema";
-import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { HabitModel, type Habit, type InsertHabit, type IHabit, habitToFrontend } from "@shared/schema";
+import connectToDatabase from "./db";
+import mongoose from "mongoose";
 
 export interface IStorage {
   getHabit(id: string): Promise<Habit | undefined>;
   getAllHabits(): Promise<Habit[]>;
   createHabit(habit: InsertHabit): Promise<Habit>;
-  updateHabit(id: string, updates: Partial<Habit>): Promise<Habit | undefined>;
+  updateHabit(id: string, updates: Partial<Omit<Habit, 'id'>>): Promise<Habit | undefined>;
   deleteHabit(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
+  private async ensureConnection() {
+    await connectToDatabase();
+  }
+
   async getHabit(id: string): Promise<Habit | undefined> {
-    const [habit] = await db.select().from(habits).where(eq(habits.id, id));
-    return habit || undefined;
+    await this.ensureConnection();
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return undefined;
+    }
+
+    const habit = await HabitModel.findById(id);
+    return habit ? habitToFrontend(habit) : undefined;
   }
 
   async getAllHabits(): Promise<Habit[]> {
-    return await db.select().from(habits);
+    await this.ensureConnection();
+    
+    const habits = await HabitModel.find().sort({ createdAt: -1 });
+    return habits.map(habitToFrontend);
   }
 
   async createHabit(insertHabit: InsertHabit): Promise<Habit> {
-    const [habit] = await db
-      .insert(habits)
-      .values(insertHabit)
-      .returning();
-    return habit;
+    await this.ensureConnection();
+    
+    const habit = new HabitModel({
+      ...insertHabit,
+      x1: 0,
+      x2: 0,
+      completedDates: [],
+      missedDates: [],
+      createdAt: new Date()
+    });
+    
+    await habit.save();
+    return habitToFrontend(habit);
   }
 
-  async updateHabit(id: string, updates: Partial<Habit>): Promise<Habit | undefined> {
-    const [habit] = await db
-      .update(habits)
-      .set(updates)
-      .where(eq(habits.id, id))
-      .returning();
-    return habit || undefined;
+  async updateHabit(id: string, updates: Partial<Omit<Habit, 'id'>>): Promise<Habit | undefined> {
+    await this.ensureConnection();
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return undefined;
+    }
+
+    // Convert string dates back to Date objects for MongoDB
+    const mongoUpdates: any = { ...updates };
+    if (mongoUpdates.createdAt) {
+      mongoUpdates.createdAt = new Date(mongoUpdates.createdAt);
+    }
+    if (mongoUpdates.lastTrackedDate) {
+      mongoUpdates.lastTrackedDate = new Date(mongoUpdates.lastTrackedDate);
+    }
+
+    const habit = await HabitModel.findByIdAndUpdate(
+      id, 
+      mongoUpdates, 
+      { new: true, runValidators: true }
+    );
+    
+    return habit ? habitToFrontend(habit) : undefined;
   }
 
   async deleteHabit(id: string): Promise<boolean> {
-    const result = await db.delete(habits).where(eq(habits.id, id));
-    return (result.rowCount ?? 0) > 0;
+    await this.ensureConnection();
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return false;
+    }
+
+    const result = await HabitModel.findByIdAndDelete(id);
+    return result !== null;
   }
 }
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a modern habit tracking web application built with React and TypeScript that helps users build and maintain positive habits through visual feedback and mathematical progress tracking. The application uses a unique mathematical formula to calculate habit strength based on successful completions (x1) versus missed days (x2), displaying progress through interactive graphs and calendars. Users can track multiple habits across different categories, view their formation progress, and get insights into their habit-building journey.
+This is a modern habit tracking web application built with React and TypeScript that helps users build and maintain positive habits through visual feedback and mathematical progress tracking. The application uses a unique mathematical formula to calculate habit strength based on successful completions (x1) versus missed days (x2), displaying progress through interactive graphs and calendars. Users can track multiple habits across different categories, view their formation progress, and get insights into their habit-building journey. The app now uses MongoDB Atlas for persistent storage that survives auto-scale environments and is easily deployable on Vercel.
 
 ## User Preferences
 
@@ -29,11 +29,10 @@ Preferred communication style: Simple, everyday language.
 - **Error Handling**: Centralized error handling middleware for consistent API responses
 
 ### Data Storage Solutions
-- **Database**: PostgreSQL configured through Drizzle ORM for production scalability
-- **ORM**: Drizzle ORM with TypeScript-first schema definitions
-- **Migration System**: Drizzle Kit for database schema migrations
-- **Local Storage**: Browser localStorage for client-side habit data persistence
-- **Session Management**: PostgreSQL session store (connect-pg-simple) for user sessions
+- **Database**: MongoDB Atlas (free tier) for cloud-native scalability and auto-scaling compatibility
+- **ODM**: Mongoose with TypeScript schema definitions for type-safe database operations
+- **Connection Management**: Cached connection pattern optimized for serverless deployments
+- **Data Persistence**: Automatic missed day tracking with database persistence across server restarts
 
 ### Mathematical Model
 - **Habit Formula**: y = 0.5 × e^(0.1×(x1-x2)) where x1 = successes, x2 = misses
@@ -68,9 +67,9 @@ Preferred communication style: Simple, everyday language.
 
 ### Backend and Database
 - **Express.js**: Web application framework for Node.js
-- **Drizzle ORM**: Type-safe SQL toolkit and query builder
-- **Neon Database**: Serverless PostgreSQL for cloud deployment
-- **Connect PG Simple**: PostgreSQL session store for Express sessions
+- **Mongoose**: MongoDB object modeling with TypeScript support
+- **MongoDB Atlas**: Free cloud database with automatic scaling and backup
+- **Vercel Deployment**: Serverless deployment platform optimized for Node.js applications
 
 ### Development and Build Tools
 - **ESBuild**: Fast JavaScript bundler for production builds

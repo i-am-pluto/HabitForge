@@ -1,48 +1,7 @@
 import { z } from "zod";
-import { pgTable, text, integer, timestamp, uuid, jsonb } from "drizzle-orm/pg-core";
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import mongoose, { Schema, Document } from "mongoose";
 
-// Drizzle table definition
-export const habits = pgTable('habits', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  name: text('name').notNull(),
-  category: text('category').notNull(),
-  x1: integer('x1').notNull().default(0), // Success counter
-  x2: integer('x2').notNull().default(0), // Missed counter
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  lastTrackedDate: timestamp('last_tracked_date', { withTimezone: true }),
-  completedDates: text('completed_dates').array().notNull().default([]), // Array of ISO date strings
-  missedDates: text('missed_dates').array().notNull().default([]) // Array of ISO date strings
-});
-
-// Zod schemas derived from Drizzle table
-export const insertHabitSchema = createInsertSchema(habits, {
-  name: z.string().min(1, "Habit name is required"),
-  category: z.enum([
-    "Health & Fitness",
-    "Learning", 
-    "Productivity",
-    "Mindfulness",
-    "Creative",
-    "Social"
-  ])
-}).omit({
-  id: true,
-  x1: true,
-  x2: true,
-  createdAt: true,
-  completedDates: true,
-  missedDates: true,
-  lastTrackedDate: true
-});
-
-export const selectHabitSchema = createSelectSchema(habits);
-
-// TypeScript types
-export type Habit = typeof habits.$inferSelect;
-export type InsertHabit = z.infer<typeof insertHabitSchema>;
-
-// Legacy Zod schema for compatibility (convert timestamps to ISO strings)
+// Zod schemas for validation
 export const habitSchema = z.object({
   id: z.string(),
   name: z.string().min(1, "Habit name is required"),
@@ -62,13 +21,62 @@ export const habitSchema = z.object({
   missedDates: z.array(z.string())
 });
 
-// Helper function to convert database habit to frontend format
-export function habitToFrontend(habit: Habit): z.infer<typeof habitSchema> {
+export const insertHabitSchema = habitSchema.omit({
+  id: true,
+  x1: true,
+  x2: true,
+  createdAt: true,
+  completedDates: true,
+  missedDates: true,
+  lastTrackedDate: true
+});
+
+// TypeScript types
+export type Habit = z.infer<typeof habitSchema>;
+export type InsertHabit = z.infer<typeof insertHabitSchema>;
+
+// MongoDB Schema
+export interface IHabit extends Document {
+  _id: mongoose.Types.ObjectId;
+  name: string;
+  category: "Health & Fitness" | "Learning" | "Productivity" | "Mindfulness" | "Creative" | "Social";
+  x1: number;
+  x2: number;
+  createdAt: Date;
+  lastTrackedDate?: Date;
+  completedDates: string[];
+  missedDates: string[];
+}
+
+const habitMongoSchema = new Schema<IHabit>({
+  name: { type: String, required: true },
+  category: { 
+    type: String, 
+    required: true,
+    enum: ["Health & Fitness", "Learning", "Productivity", "Mindfulness", "Creative", "Social"]
+  },
+  x1: { type: Number, required: true, default: 0 },
+  x2: { type: Number, required: true, default: 0 },
+  createdAt: { type: Date, required: true, default: Date.now },
+  lastTrackedDate: { type: Date },
+  completedDates: { type: [String], required: true, default: [] },
+  missedDates: { type: [String], required: true, default: [] }
+});
+
+export const HabitModel = mongoose.model<IHabit>('Habit', habitMongoSchema);
+
+// Helper function to convert MongoDB document to frontend format
+export function habitToFrontend(habit: IHabit): Habit {
   return {
-    ...habit,
-    category: habit.category as "Health & Fitness" | "Learning" | "Productivity" | "Mindfulness" | "Creative" | "Social",
+    id: habit._id.toString(),
+    name: habit.name,
+    category: habit.category,
+    x1: habit.x1,
+    x2: habit.x2,
     createdAt: habit.createdAt.toISOString(),
     lastTrackedDate: habit.lastTrackedDate?.toISOString(),
+    completedDates: habit.completedDates,
+    missedDates: habit.missedDates
   };
 }
 
