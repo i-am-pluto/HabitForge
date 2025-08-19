@@ -7,10 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { userSession } from "@/lib/userSession";
+import { SessionManager } from "./SessionManager";
 
 export function HabitTracker() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(userSession.getUserId());
+  const [sessionKey, setSessionKey] = useState(0); // Force re-render on session changes
   const { 
     habits, 
     selectedHabit, 
@@ -77,6 +79,11 @@ export function HabitTracker() {
     alert('Session ID copied to clipboard! Share this ID with others to give them access to this habit tracker.');
   };
 
+  const handleSessionChange = () => {
+    setCurrentUserId(userSession.getUserId());
+    setSessionKey(prev => prev + 1); // Force re-render
+  };
+
   return (
     <div className="min-h-screen bg-background font-inter">
       {/* Header */}
@@ -113,16 +120,7 @@ export function HabitTracker() {
                 Share
               </Button>
               
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleNewSession}
-                className="text-xs"
-                data-testid="button-new-session"
-              >
-                <i className="fas fa-plus mr-1"></i>
-                New Session
-              </Button>
+              <SessionManager onSessionChange={handleSessionChange} />
             </div>
             
             <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
