@@ -1,17 +1,18 @@
 import { useEffect, useRef } from "react";
 import { Chart, registerables } from "chart.js";
-import { generateGraphData } from "@/lib/habitMath";
+import { generateGraphData, getSuccessfulDaysLast60 } from "@/lib/habitMath";
 
 Chart.register(...registerables);
 
 interface HabitGraphProps {
-  x1: number;
-  x2: number;
-  createdAt: string;
+  habit: {
+    completedDates: string[];
+    missedDates: string[];
+  };
   className?: string;
 }
 
-export function HabitGraph({ x1, x2, createdAt, className = "" }: HabitGraphProps) {
+export function HabitGraph({ habit, className = "" }: HabitGraphProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const chartRef = useRef<Chart | null>(null);
 
@@ -26,14 +27,15 @@ export function HabitGraph({ x1, x2, createdAt, className = "" }: HabitGraphProp
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
 
-    const { habitData, thresholdData } = generateGraphData(x1, x2, 50, createdAt);
+    const successfulDays = getSuccessfulDaysLast60(habit.completedDates);
+    const { habitData, thresholdData, currentPoint } = generateGraphData(successfulDays, 60);
 
     chartRef.current = new Chart(ctx, {
       type: 'line',
       data: {
         datasets: [
           {
-            label: 'Habit Strength (y = 0.5×e^(0.18×(x1-x2)))',
+            label: 'Habit Strength (H(d) = 1/(1+e^(-k(d-d₀))))',
             data: habitData,
             borderColor: '#3B82F6',
             backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -45,7 +47,7 @@ export function HabitGraph({ x1, x2, createdAt, className = "" }: HabitGraphProp
             pointHoverBackgroundColor: '#3B82F6'
           },
           {
-            label: 'Habit Formation Threshold (y = x)',
+            label: 'Tipping Point (y = 0.5)',
             data: thresholdData,
             borderColor: '#6B7280',
             backgroundColor: 'transparent',
@@ -54,6 +56,16 @@ export function HabitGraph({ x1, x2, createdAt, className = "" }: HabitGraphProp
             fill: false,
             pointRadius: 0,
             pointHoverRadius: 4
+          },
+          {
+            label: 'Current Position',
+            data: [currentPoint],
+            backgroundColor: '#EF4444',
+            borderColor: '#EF4444',
+            pointRadius: 8,
+            pointHoverRadius: 10,
+            showLine: false,
+            pointStyle: 'circle'
           }
         ]
       },
@@ -96,7 +108,7 @@ export function HabitGraph({ x1, x2, createdAt, className = "" }: HabitGraphProp
             position: 'bottom',
             title: {
               display: true,
-              text: 'Days',
+              text: 'Successful Days (Last 60 Days)',
               font: {
                 size: 12,
                 weight: 500
@@ -140,7 +152,7 @@ export function HabitGraph({ x1, x2, createdAt, className = "" }: HabitGraphProp
         chartRef.current.destroy();
       }
     };
-  }, [x1, x2]);
+  }, [habit]);
 
   return (
     <div className={`h-80 ${className}`}>

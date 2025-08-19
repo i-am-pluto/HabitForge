@@ -10,7 +10,10 @@ import {
   calculateProgress, 
   getHabitStatus, 
   calculateSuccessRate,
-  estimateDaysToHabit
+  estimateDaysToHabit,
+  getSuccessfulDaysLast60,
+  getMissedDaysLast60,
+  isHabitFormed
 } from "@/lib/habitMath";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -110,15 +113,13 @@ export function useHabits() {
   };
 
   const getHabitProgress = (habit: FrontendHabit): HabitProgress => {
-    const daysSinceStart = Math.floor(
-      (Date.now() - new Date(habit.createdAt).getTime()) / (1000 * 60 * 60 * 24)
-    ) + 1;
+    const successfulDays = getSuccessfulDaysLast60(habit.completedDates);
     
-    const currentValue = calculateHabitValue(habit.x1, habit.x2);
-    const progress = calculateProgress(habit.x1, habit.x2, daysSinceStart);
-    const status = getHabitStatus(progress);
+    const currentValue = calculateHabitValue(successfulDays);
+    const progress = calculateProgress(successfulDays);
+    const status = getHabitStatus(currentValue);
     const successRate = calculateSuccessRate(habit.completedDates, habit.missedDates);
-    const daysToHabit = estimateDaysToHabit(habit.x1, habit.x2, daysSinceStart);
+    const daysToHabit = estimateDaysToHabit(successfulDays);
     
     return {
       currentValue,

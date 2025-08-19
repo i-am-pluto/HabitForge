@@ -1,7 +1,7 @@
 // New sigmoid formula for habit formation
 // H(d) = 1 / (1 + e^{-k(d - d₀)})
 // Where:
-// - d is the number of successful days in last 30 days
+// - d is the number of successful days in last 60 days
 // - k = 0.2 (steepness factor)
 // - d₀ = 0.19 (inflection point where habit strength = 0.5)
 // - 0.5 output represents tipping point where habit formation begins
@@ -62,7 +62,7 @@ export function calculateSuccessRate(completedDates: string[], missedDates: stri
   return (completedDates.length / totalDays) * 100;
 }
 
-export function generateGraphData(successfulDaysLast30: number, maxDays: number = 30) {
+export function generateGraphData(successfulDaysLast60: number, maxDays: number = 60) {
   const habitData = [];
   const thresholdData = [];
   
@@ -73,27 +73,27 @@ export function generateGraphData(successfulDaysLast30: number, maxDays: number 
     thresholdData.push({ x: day, y: 0.5 }); // Tipping point threshold line
   }
   
-  return { habitData, thresholdData, currentPoint: { x: successfulDaysLast30, y: calculateHabitValue(successfulDaysLast30) } };
+  return { habitData, thresholdData, currentPoint: { x: successfulDaysLast60, y: calculateHabitValue(successfulDaysLast60) } };
 }
 
-// Helper function to filter dates to last 30 days
-export function filterLast30Days(dates: string[]): string[] {
+// Helper function to filter dates to last 60 days
+export function filterLast60Days(dates: string[]): string[] {
   const today = new Date();
-  const thirtyDaysAgo = new Date(today);
-  thirtyDaysAgo.setDate(today.getDate() - 30);
+  const sixtyDaysAgo = new Date(today);
+  sixtyDaysAgo.setDate(today.getDate() - 60);
   
   return dates.filter(dateStr => {
     const date = new Date(dateStr);
-    return date >= thirtyDaysAgo && date <= today;
+    return date >= sixtyDaysAgo && date <= today;
   });
 }
 
-// Calculate successful days in last 30 days
-export function getSuccessfulDaysLast30(completedDates: string[]): number {
-  return filterLast30Days(completedDates).length;
+// Calculate successful days in last 60 days
+export function getSuccessfulDaysLast60(completedDates: string[]): number {
+  return filterLast60Days(completedDates).length;
 }
 
-// Calculate missed days in last 30 days
-export function getMissedDaysLast30(missedDates: string[]): number {
-  return filterLast30Days(missedDates).length;
+// Calculate missed days in last 60 days
+export function getMissedDaysLast60(missedDates: string[]): number {
+  return filterLast60Days(missedDates).length;
 }

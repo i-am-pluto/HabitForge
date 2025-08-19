@@ -360,25 +360,23 @@ export function HabitTracker() {
                   <div className="flex items-center justify-between mb-6">
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">Habit Formation Graph</h3>
-                      <p className="text-muted">Exponential growth vs. linear threshold</p>
+                      <p className="text-muted">Sigmoid curve showing habit strength (0.5 = tipping point)</p>
                     </div>
                     
                     <div className="flex items-center space-x-4">
                       <div className="flex items-center space-x-2">
                         <div className="w-3 h-3 bg-primary rounded-full"></div>
-                        <span className="text-sm text-muted">Habit Curve (y = 0.5×e^(0.1×(x1-x2)))</span>
+                        <span className="text-sm text-muted">Habit Strength (H(d) = 1/(1+e^(-k(d-d₀))))</span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
-                        <span className="text-sm text-muted">Threshold (y = x)</span>
+                        <span className="text-sm text-muted">Tipping Point (y = 0.5)</span>
                       </div>
                     </div>
                   </div>
                   
                   <HabitGraph 
-                    x1={selectedHabit.x1} 
-                    x2={selectedHabit.x2} 
-                    createdAt={selectedHabit.createdAt} 
+                    habit={selectedHabit} 
                   />
                   
                   <div className="mt-4 p-4 bg-blue-50 rounded-xl">
@@ -389,7 +387,7 @@ export function HabitTracker() {
                       <div>
                         <p className="text-sm font-medium text-gray-900">How it works</p>
                         <p className="text-sm text-muted mt-1">
-                          Your habit strength grows exponentially with consistent practice. The curve crosses the diagonal line when your habit is mathematically "formed" - typically after 20+ consistent days with minimal misses.
+                          Your habit strength follows a sigmoid curve based on successful days in the last 60 days. When you reach 0.5 (50%), you've hit the tipping point where habit formation begins accelerating.
                         </p>
                       </div>
                     </div>

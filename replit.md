@@ -34,11 +34,13 @@ Preferred communication style: Simple, everyday language.
 - **Connection Management**: Cached connection pattern optimized for serverless deployments
 - **Data Persistence**: Automatic missed day tracking with database persistence across server restarts
 
-### Mathematical Model
-- **Habit Formula**: y = 0.5 × e^(0.1×(x1-x2)) where x1 = successes, x2 = misses
-- **Progress Calculation**: Habit formation occurs when y-value equals or exceeds days since start
-- **Status Classification**: Three-tier system (struggling < 50%, building 50-99%, formed ≥100%)
-- **Prediction Algorithm**: Exponential estimation for days remaining to habit formation
+### Mathematical Model (Updated August 2025)
+- **Sigmoid Formula**: H(d) = 1 / (1 + e^{-k(d - d₀)}) where d = successful days in last 60 days
+- **Parameters**: k = 0.2 (steepness factor), d₀ = 0.19 (inflection point)
+- **Tipping Point**: 0.5 output represents habit formation beginning (50% strength)
+- **Data Window**: Only considers last 60 days for all calculations
+- **Status Classification**: struggling < 50%, building 50-80%, formed ≥80%
+- **Progress Visualization**: Real-time sigmoid curve with current position marker
 
 ### Component Architecture
 - **HabitTracker**: Main container component managing overall state and layout
