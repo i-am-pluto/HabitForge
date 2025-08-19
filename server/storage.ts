@@ -10,14 +10,75 @@ export interface IStorage {
   deleteHabit(id: string): Promise<boolean>;
 }
 
+// In-memory storage fallback for when MongoDB is not available
+export class MemStorage implements IStorage {
+  private habits: Map<string, Habit> = new Map();
+  private idCounter = 1;
+
+  private generateId(): string {
+    return `habit_${this.idCounter++}_${Date.now()}`;
+  }
+
+  async getHabit(id: string): Promise<Habit | undefined> {
+    return this.habits.get(id);
+  }
+
+  async getAllHabits(): Promise<Habit[]> {
+    return Array.from(this.habits.values()).sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }
+
+  async createHabit(insertHabit: InsertHabit): Promise<Habit> {
+    const habit: Habit = {
+      id: this.generateId(),
+      ...insertHabit,
+      x1: 0,
+      x2: 0,
+      createdAt: new Date().toISOString(),
+      completedDates: [],
+      missedDates: []
+    };
+    
+    this.habits.set(habit.id, habit);
+    return habit;
+  }
+
+  async updateHabit(id: string, updates: Partial<Omit<Habit, 'id'>>): Promise<Habit | undefined> {
+    const habit = this.habits.get(id);
+    if (!habit) return undefined;
+
+    const updatedHabit = { ...habit, ...updates };
+    this.habits.set(id, updatedHabit);
+    return updatedHabit;
+  }
+
+  async deleteHabit(id: string): Promise<boolean> {
+    return this.habits.delete(id);
+  }
+}
+
 export class DatabaseStorage implements IStorage {
+  private fallback = new MemStorage();
+  private mongoConnected = false;
+
   private async ensureConnection() {
-    await connectToDatabase();
+    try {
+      await connectToDatabase();
+      this.mongoConnected = true;
+    } catch (error) {
+      console.warn('MongoDB connection failed, using in-memory storage:', error instanceof Error ? error.message : 'Unknown error');
+      this.mongoConnected = false;
+    }
   }
 
   async getHabit(id: string): Promise<Habit | undefined> {
     await this.ensureConnection();
     
+    if (!this.mongoConnected) {
+      return this.fallback.getHabit(id);
+    }
+
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return undefined;
     }
@@ -29,6 +90,10 @@ export class DatabaseStorage implements IStorage {
   async getAllHabits(): Promise<Habit[]> {
     await this.ensureConnection();
     
+    if (!this.mongoConnected) {
+      return this.fallback.getAllHabits();
+    }
+
     const habits = await HabitModel.find().sort({ createdAt: -1 });
     return habits.map(habitToFrontend);
   }
@@ -36,6 +101,10 @@ export class DatabaseStorage implements IStorage {
   async createHabit(insertHabit: InsertHabit): Promise<Habit> {
     await this.ensureConnection();
     
+    if (!this.mongoConnected) {
+      return this.fallback.createHabit(insertHabit);
+    }
+
     const habit = new HabitModel({
       ...insertHabit,
       x1: 0,
@@ -52,6 +121,10 @@ export class DatabaseStorage implements IStorage {
   async updateHabit(id: string, updates: Partial<Omit<Habit, 'id'>>): Promise<Habit | undefined> {
     await this.ensureConnection();
     
+    if (!this.mongoConnected) {
+      return this.fallback.updateHabit(id, updates);
+    }
+
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return undefined;
     }
@@ -77,6 +150,10 @@ export class DatabaseStorage implements IStorage {
   async deleteHabit(id: string): Promise<boolean> {
     await this.ensureConnection();
     
+    if (!this.mongoConnected) {
+      return this.fallback.deleteHabit(id);
+    }
+
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return false;
     }
