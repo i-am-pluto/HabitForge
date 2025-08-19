@@ -1,14 +1,14 @@
-// New sigmoid formula for habit formation
+// Sigmoid formula for habit formation
 // H(d) = 1 / (1 + e^{-k(d - d₀)})
 // Where:
-// - d is the number of successful days in last 60 days
-// - k = 0.2 (steepness factor)
-// - d₀ = 0.19 (inflection point where habit strength = 0.5)
+// - d is the current day number of streak (Day 1, 2, 3...)
+// - k = 0.2 (steepness factor - determines how quickly habit forms)
+// - d₀ = 0.19 (inflection point where habit strength = 0.5, the tipping point)
 // - 0.5 output represents tipping point where habit formation begins
-export function calculateHabitValue(successfulDays: number): number {
+export function calculateHabitValue(streakDays: number): number {
   const k = 0.2;
   const d0 = 0.19;
-  const d = successfulDays;
+  const d = streakDays;
   
   const exponent = -k * (d - d0);
   const result = 1 / (1 + Math.exp(exponent));

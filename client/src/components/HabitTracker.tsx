@@ -355,6 +355,31 @@ export function HabitTracker() {
                   </div>
                 </Card>
                 
+                {/* Mathematical Formula Display */}
+                <Card className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+                  <div className="text-center">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Mathematical Formula</h3>
+                    <div className="bg-white p-4 rounded-lg border border-blue-200 mb-4">
+                      <p className="text-2xl font-mono text-blue-800 font-semibold">
+                        H(d) = 1 / (1 + e^(-0.2(d - 0.19)))
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="text-left">
+                        <p><span className="font-semibold">H(d):</span> Habit strength (0-1)</p>
+                        <p><span className="font-semibold">d:</span> Current streak day</p>
+                      </div>
+                      <div className="text-left">
+                        <p><span className="font-semibold">k = 0.2:</span> Steepness factor</p>
+                        <p><span className="font-semibold">d₀ = 0.19:</span> Inflection point</p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-blue-700 mt-3 font-medium">
+                      Tipping Point: When H(d) = 0.5, habit formation begins accelerating
+                    </p>
+                  </div>
+                </Card>
+
                 {/* Mathematical Visualization */}
                 <Card className="p-6">
                   <div className="flex items-center justify-between mb-6">
@@ -366,7 +391,7 @@ export function HabitTracker() {
                     <div className="flex items-center space-x-4">
                       <div className="flex items-center space-x-2">
                         <div className="w-3 h-3 bg-primary rounded-full"></div>
-                        <span className="text-sm text-muted">Habit Strength (H(d) = 1/(1+e^(-k(d-d₀))))</span>
+                        <span className="text-sm text-muted">Habit Strength (H(d) = 1/(1+e^(-0.2(d-0.19))))</span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
@@ -387,7 +412,7 @@ export function HabitTracker() {
                       <div>
                         <p className="text-sm font-medium text-gray-900">How it works</p>
                         <p className="text-sm text-muted mt-1">
-                          Your habit strength follows a sigmoid curve based on successful days in the last 60 days. When you reach 0.5 (50%), you've hit the tipping point where habit formation begins accelerating.
+                          Your habit strength follows the sigmoid formula H(d) = 1/(1+e^(-0.2(d-0.19))) where d is your current streak day. When you reach 0.5 (50%), you've hit the tipping point where habit formation begins accelerating.
                         </p>
                       </div>
                     </div>
