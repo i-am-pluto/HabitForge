@@ -36,6 +36,10 @@ A modern habit tracking web application that uses exponential mathematical funct
 
 3. **Run the development server:**
    ```bash
+   # Option 1: Quick start
+   ./run.sh
+   
+   # Option 2: Manual start
    npm run dev
    ```
 

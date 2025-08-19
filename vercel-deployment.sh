@@ -16,7 +16,8 @@ npm run build
 
 # Deploy to Vercel
 echo "🌐 Deploying to Vercel..."
-vercel --prod
+echo "$VERCEL_TOKEN"
+vercel --prod --token $VERCEL_TOKEN
 
 echo "✅ Deployment complete!"
 echo ""
